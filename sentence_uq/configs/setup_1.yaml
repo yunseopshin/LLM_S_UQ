@@ -1,0 +1,10 @@
+# Setup 1 — Cross-domain (Han et al. reproduction).
+# Train on LongFact-Objects, validate on held-out LongFact topics,
+# test on the fixed Han 30-entity FActScore-Bio set.
+# Inherits everything else from configs/default.yaml.
+
+dataset:
+  setup: 1
+  split_file: data/splits/setup_1.json
+
+results_dir: results/setup_1

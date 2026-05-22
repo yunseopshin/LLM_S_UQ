@@ -1,0 +1,9 @@
+# Setup 3 — Multi-domain (LongFact topic-level).
+# Train on 26 LongFact-Objects topics, validate on 4, test on 8.
+# Inherits everything else from configs/default.yaml.
+
+dataset:
+  setup: 3
+  split_file: data/splits/setup_3.json
+
+results_dir: results/setup_3

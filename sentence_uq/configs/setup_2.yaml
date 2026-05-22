@@ -1,0 +1,9 @@
+# Setup 2 — In-domain Biography (default).
+# Train on 120 FActScore-Bio entities, validate on 33, test on the Han 30.
+# Inherits everything else from configs/default.yaml.
+
+dataset:
+  setup: 2
+  split_file: data/splits/setup_2.json
+
+results_dir: results/setup_2

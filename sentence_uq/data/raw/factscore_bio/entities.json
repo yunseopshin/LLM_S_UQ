@@ -1,0 +1,734 @@
+[
+  {
+    "entity": "Kang Ji-hwan",
+    "prompt": "Tell me a bio of Kang Ji-hwan."
+  },
+  {
+    "entity": "Kalki Koechlin",
+    "prompt": "Tell me a bio of Kalki Koechlin."
+  },
+  {
+    "entity": "William Post",
+    "prompt": "Tell me a bio of William Post."
+  },
+  {
+    "entity": "William Waldegrave, Baron Waldegrave of North Hill",
+    "prompt": "Tell me a bio of William Waldegrave, Baron Waldegrave of North Hill."
+  },
+  {
+    "entity": "Darrius Heyward-Bey",
+    "prompt": "Tell me a bio of Darrius Heyward-Bey."
+  },
+  {
+    "entity": "Andrew Shue",
+    "prompt": "Tell me a bio of Andrew Shue."
+  },
+  {
+    "entity": "Wahida Prism Khan",
+    "prompt": "Tell me a bio of Wahida Prism Khan."
+  },
+  {
+    "entity": "Waka Flocka Flame",
+    "prompt": "Tell me a bio of Waka Flocka Flame."
+  },
+  {
+    "entity": "Focus...",
+    "prompt": "Tell me a bio of Focus...."
+  },
+  {
+    "entity": "Sara Paxton",
+    "prompt": "Tell me a bio of Sara Paxton."
+  },
+  {
+    "entity": "Marianne McAndrew",
+    "prompt": "Tell me a bio of Marianne McAndrew."
+  },
+  {
+    "entity": "Keita Kadokura",
+    "prompt": "Tell me a bio of Keita Kadokura."
+  },
+  {
+    "entity": "John Estes",
+    "prompt": "Tell me a bio of John Estes."
+  },
+  {
+    "entity": "Oliver Letwin",
+    "prompt": "Tell me a bio of Oliver Letwin."
+  },
+  {
+    "entity": "Ram Gopal Varma",
+    "prompt": "Tell me a bio of Ram Gopal Varma."
+  },
+  {
+    "entity": "James Taylor",
+    "prompt": "Tell me a bio of James Taylor."
+  },
+  {
+    "entity": "Joeri Adams",
+    "prompt": "Tell me a bio of Joeri Adams."
+  },
+  {
+    "entity": "Cha Seung-won",
+    "prompt": "Tell me a bio of Cha Seung-won."
+  },
+  {
+    "entity": "Ko Itakura",
+    "prompt": "Tell me a bio of Ko Itakura."
+  },
+  {
+    "entity": "Siti Rahmah Kassim",
+    "prompt": "Tell me a bio of Siti Rahmah Kassim."
+  },
+  {
+    "entity": "Andreas Kisser",
+    "prompt": "Tell me a bio of Andreas Kisser."
+  },
+  {
+    "entity": "Sharad Kumar (athlete)",
+    "prompt": "Tell me a bio of Sharad Kumar (athlete)."
+  },
+  {
+    "entity": "Idriss Ngari",
+    "prompt": "Tell me a bio of Idriss Ngari."
+  },
+  {
+    "entity": "Gerhard Fischer (inventor)",
+    "prompt": "Tell me a bio of Gerhard Fischer (inventor)."
+  },
+  {
+    "entity": "Katsunosuke Hori",
+    "prompt": "Tell me a bio of Katsunosuke Hori."
+  },
+  {
+    "entity": "Zelma Wilson",
+    "prompt": "Tell me a bio of Zelma Wilson."
+  },
+  {
+    "entity": "Adil Rami",
+    "prompt": "Tell me a bio of Adil Rami."
+  },
+  {
+    "entity": "Richard Burkewood Welbourn",
+    "prompt": "Tell me a bio of Richard Burkewood Welbourn."
+  },
+  {
+    "entity": "Miguel Díaz (baseball)",
+    "prompt": "Tell me a bio of Miguel Díaz (baseball)."
+  },
+  {
+    "entity": "Teresa Palmer",
+    "prompt": "Tell me a bio of Teresa Palmer."
+  },
+  {
+    "entity": "Gerardo Fernandez Fe",
+    "prompt": "Tell me a bio of Gerardo Fernandez Fe."
+  },
+  {
+    "entity": "Augusto Martínez Sánchez",
+    "prompt": "Tell me a bio of Augusto Martínez Sánchez."
+  },
+  {
+    "entity": "Chief Jones",
+    "prompt": "Tell me a bio of Chief Jones."
+  },
+  {
+    "entity": "Glover Teixeira",
+    "prompt": "Tell me a bio of Glover Teixeira."
+  },
+  {
+    "entity": "George Cukor",
+    "prompt": "Tell me a bio of George Cukor."
+  },
+  {
+    "entity": "Chaim Malinowitz",
+    "prompt": "Tell me a bio of Chaim Malinowitz."
+  },
+  {
+    "entity": "Marie Alexandrine Becker",
+    "prompt": "Tell me a bio of Marie Alexandrine Becker."
+  },
+  {
+    "entity": "Lauren London",
+    "prompt": "Tell me a bio of Lauren London."
+  },
+  {
+    "entity": "Harrison Ford",
+    "prompt": "Tell me a bio of Harrison Ford."
+  },
+  {
+    "entity": "Dacre Montgomery",
+    "prompt": "Tell me a bio of Dacre Montgomery."
+  },
+  {
+    "entity": "Samuel Oboh",
+    "prompt": "Tell me a bio of Samuel Oboh."
+  },
+  {
+    "entity": "Lina Medina",
+    "prompt": "Tell me a bio of Lina Medina."
+  },
+  {
+    "entity": "Fran Unsworth",
+    "prompt": "Tell me a bio of Fran Unsworth."
+  },
+  {
+    "entity": "Anushka Sharma",
+    "prompt": "Tell me a bio of Anushka Sharma."
+  },
+  {
+    "entity": "Ra Jong-yil",
+    "prompt": "Tell me a bio of Ra Jong-yil."
+  },
+  {
+    "entity": "Shashank Manohar",
+    "prompt": "Tell me a bio of Shashank Manohar."
+  },
+  {
+    "entity": "Nikki Sixx",
+    "prompt": "Tell me a bio of Nikki Sixx."
+  },
+  {
+    "entity": "María Elena Medina-Mora Icaza",
+    "prompt": "Tell me a bio of María Elena Medina-Mora Icaza."
+  },
+  {
+    "entity": "Matthew Tukaki",
+    "prompt": "Tell me a bio of Matthew Tukaki."
+  },
+  {
+    "entity": "Osama bin Laden",
+    "prompt": "Tell me a bio of Osama bin Laden."
+  },
+  {
+    "entity": "Lily Branscombe",
+    "prompt": "Tell me a bio of Lily Branscombe."
+  },
+  {
+    "entity": "Shayne Neumann",
+    "prompt": "Tell me a bio of Shayne Neumann."
+  },
+  {
+    "entity": "Manuel Salazar (footballer)",
+    "prompt": "Tell me a bio of Manuel Salazar (footballer)."
+  },
+  {
+    "entity": "Roselyn Sánchez",
+    "prompt": "Tell me a bio of Roselyn Sánchez."
+  },
+  {
+    "entity": "Waruhiu Itote",
+    "prompt": "Tell me a bio of Waruhiu Itote."
+  },
+  {
+    "entity": "Elsa Pataky",
+    "prompt": "Tell me a bio of Elsa Pataky."
+  },
+  {
+    "entity": "Garrincha",
+    "prompt": "Tell me a bio of Garrincha."
+  },
+  {
+    "entity": "Tim Fischer",
+    "prompt": "Tell me a bio of Tim Fischer."
+  },
+  {
+    "entity": "Damir Memović",
+    "prompt": "Tell me a bio of Damir Memović."
+  },
+  {
+    "entity": "Mitzi Gaynor",
+    "prompt": "Tell me a bio of Mitzi Gaynor."
+  },
+  {
+    "entity": "Vaira Vīķe-Freiberga",
+    "prompt": "Tell me a bio of Vaira Vīķe-Freiberga."
+  },
+  {
+    "entity": "Ben Lummis",
+    "prompt": "Tell me a bio of Ben Lummis."
+  },
+  {
+    "entity": "Gonzalo Fonseca",
+    "prompt": "Tell me a bio of Gonzalo Fonseca."
+  },
+  {
+    "entity": "Michael Valpy",
+    "prompt": "Tell me a bio of Michael Valpy."
+  },
+  {
+    "entity": "Emmett Skilton",
+    "prompt": "Tell me a bio of Emmett Skilton."
+  },
+  {
+    "entity": "Besant Ravi",
+    "prompt": "Tell me a bio of Besant Ravi."
+  },
+  {
+    "entity": "Carolina Portesi Peroni",
+    "prompt": "Tell me a bio of Carolina Portesi Peroni."
+  },
+  {
+    "entity": "Toyoko Tokiwa",
+    "prompt": "Tell me a bio of Toyoko Tokiwa."
+  },
+  {
+    "entity": "Bella Akhmadulina",
+    "prompt": "Tell me a bio of Bella Akhmadulina."
+  },
+  {
+    "entity": "Baltasar Corrada del Río",
+    "prompt": "Tell me a bio of Baltasar Corrada del Río."
+  },
+  {
+    "entity": "Daniel Carvalho",
+    "prompt": "Tell me a bio of Daniel Carvalho."
+  },
+  {
+    "entity": "Antonio Gasalla",
+    "prompt": "Tell me a bio of Antonio Gasalla."
+  },
+  {
+    "entity": "David Wenham",
+    "prompt": "Tell me a bio of David Wenham."
+  },
+  {
+    "entity": "Desmond Luke",
+    "prompt": "Tell me a bio of Desmond Luke."
+  },
+  {
+    "entity": "Antonio Diaz (Filipino politician)",
+    "prompt": "Tell me a bio of Antonio Diaz (Filipino politician)."
+  },
+  {
+    "entity": "Ylona Garcia",
+    "prompt": "Tell me a bio of Ylona Garcia."
+  },
+  {
+    "entity": "Roxana Díaz (athlete)",
+    "prompt": "Tell me a bio of Roxana Díaz (athlete)."
+  },
+  {
+    "entity": "Doug Sheehan",
+    "prompt": "Tell me a bio of Doug Sheehan."
+  },
+  {
+    "entity": "Joey D. Vieira",
+    "prompt": "Tell me a bio of Joey D. Vieira."
+  },
+  {
+    "entity": "Maneka Gandhi",
+    "prompt": "Tell me a bio of Maneka Gandhi."
+  },
+  {
+    "entity": "Vanessa Kirby",
+    "prompt": "Tell me a bio of Vanessa Kirby."
+  },
+  {
+    "entity": "Lees Knowles",
+    "prompt": "Tell me a bio of Lees Knowles."
+  },
+  {
+    "entity": "Liam Payne",
+    "prompt": "Tell me a bio of Liam Payne."
+  },
+  {
+    "entity": "Scientist (musician)",
+    "prompt": "Tell me a bio of Scientist (musician)."
+  },
+  {
+    "entity": "Terence Blacker",
+    "prompt": "Tell me a bio of Terence Blacker."
+  },
+  {
+    "entity": "Canelo Álvarez",
+    "prompt": "Tell me a bio of Canelo Álvarez."
+  },
+  {
+    "entity": "IU (singer)",
+    "prompt": "Tell me a bio of IU (singer)."
+  },
+  {
+    "entity": "Hesham Nazih",
+    "prompt": "Tell me a bio of Hesham Nazih."
+  },
+  {
+    "entity": "Thomas Houghton (rugby league)",
+    "prompt": "Tell me a bio of Thomas Houghton (rugby league)."
+  },
+  {
+    "entity": "Luis N. Rivera-Pagán",
+    "prompt": "Tell me a bio of Luis N. Rivera-Pagán."
+  },
+  {
+    "entity": "Prince Rivers",
+    "prompt": "Tell me a bio of Prince Rivers."
+  },
+  {
+    "entity": "Francesco Mimbelli",
+    "prompt": "Tell me a bio of Francesco Mimbelli."
+  },
+  {
+    "entity": "Ronaldo (Brazilian footballer)",
+    "prompt": "Tell me a bio of Ronaldo (Brazilian footballer)."
+  },
+  {
+    "entity": "Shahnaz Pahlavi",
+    "prompt": "Tell me a bio of Shahnaz Pahlavi."
+  },
+  {
+    "entity": "Milton Diamond",
+    "prompt": "Tell me a bio of Milton Diamond."
+  },
+  {
+    "entity": "Jimmy Bartel",
+    "prompt": "Tell me a bio of Jimmy Bartel."
+  },
+  {
+    "entity": "Taral Hicks",
+    "prompt": "Tell me a bio of Taral Hicks."
+  },
+  {
+    "entity": "Frederick Howard Taylor",
+    "prompt": "Tell me a bio of Frederick Howard Taylor."
+  },
+  {
+    "entity": "Zamfir Arbore",
+    "prompt": "Tell me a bio of Zamfir Arbore."
+  },
+  {
+    "entity": "Kim Casali",
+    "prompt": "Tell me a bio of Kim Casali."
+  },
+  {
+    "entity": "Mohamed Salah",
+    "prompt": "Tell me a bio of Mohamed Salah."
+  },
+  {
+    "entity": "Rin Iwanaga",
+    "prompt": "Tell me a bio of Rin Iwanaga."
+  },
+  {
+    "entity": "Carlos Santana",
+    "prompt": "Tell me a bio of Carlos Santana."
+  },
+  {
+    "entity": "Jack Leach",
+    "prompt": "Tell me a bio of Jack Leach."
+  },
+  {
+    "entity": "Abdou Diallo",
+    "prompt": "Tell me a bio of Abdou Diallo."
+  },
+  {
+    "entity": "Chadwick Boseman",
+    "prompt": "Tell me a bio of Chadwick Boseman."
+  },
+  {
+    "entity": "Fernando (footballer, born 1984)",
+    "prompt": "Tell me a bio of Fernando (footballer, born 1984)."
+  },
+  {
+    "entity": "Alma Katsu",
+    "prompt": "Tell me a bio of Alma Katsu."
+  },
+  {
+    "entity": "Regina Martínez Pérez",
+    "prompt": "Tell me a bio of Regina Martínez Pérez."
+  },
+  {
+    "entity": "Nisar Ahmad Kakru",
+    "prompt": "Tell me a bio of Nisar Ahmad Kakru."
+  },
+  {
+    "entity": "Rob Furlong",
+    "prompt": "Tell me a bio of Rob Furlong."
+  },
+  {
+    "entity": "Alberto Malesani",
+    "prompt": "Tell me a bio of Alberto Malesani."
+  },
+  {
+    "entity": "Martín Lousteau",
+    "prompt": "Tell me a bio of Martín Lousteau."
+  },
+  {
+    "entity": "Julia Faye",
+    "prompt": "Tell me a bio of Julia Faye."
+  },
+  {
+    "entity": "Luis Guillermo Rivera",
+    "prompt": "Tell me a bio of Luis Guillermo Rivera."
+  },
+  {
+    "entity": "Anna May Wong",
+    "prompt": "Tell me a bio of Anna May Wong."
+  },
+  {
+    "entity": "Lanny Flaherty",
+    "prompt": "Tell me a bio of Lanny Flaherty."
+  },
+  {
+    "entity": "Jean Daullé",
+    "prompt": "Tell me a bio of Jean Daullé."
+  },
+  {
+    "entity": "Daniel Charles",
+    "prompt": "Tell me a bio of Daniel Charles."
+  },
+  {
+    "entity": "Gilberto Silva",
+    "prompt": "Tell me a bio of Gilberto Silva."
+  },
+  {
+    "entity": "Jessica Barboza",
+    "prompt": "Tell me a bio of Jessica Barboza."
+  },
+  {
+    "entity": "Vincenzo Tusa",
+    "prompt": "Tell me a bio of Vincenzo Tusa."
+  },
+  {
+    "entity": "Lewis Nkosi",
+    "prompt": "Tell me a bio of Lewis Nkosi."
+  },
+  {
+    "entity": "Wendy (singer)",
+    "prompt": "Tell me a bio of Wendy (singer)."
+  },
+  {
+    "entity": "Kourosh Zolani",
+    "prompt": "Tell me a bio of Kourosh Zolani."
+  },
+  {
+    "entity": "Jesse Foppert",
+    "prompt": "Tell me a bio of Jesse Foppert."
+  },
+  {
+    "entity": "Travis Oliphant",
+    "prompt": "Tell me a bio of Travis Oliphant."
+  },
+  {
+    "entity": "Carlos Alfonso",
+    "prompt": "Tell me a bio of Carlos Alfonso."
+  },
+  {
+    "entity": "Jonathan Tucker",
+    "prompt": "Tell me a bio of Jonathan Tucker."
+  },
+  {
+    "entity": "Botak Chin",
+    "prompt": "Tell me a bio of Botak Chin."
+  },
+  {
+    "entity": "Gabriela Sabatini",
+    "prompt": "Tell me a bio of Gabriela Sabatini."
+  },
+  {
+    "entity": "James B. Donovan",
+    "prompt": "Tell me a bio of James B. Donovan."
+  },
+  {
+    "entity": "Roberto Clemente",
+    "prompt": "Tell me a bio of Roberto Clemente."
+  },
+  {
+    "entity": "Robert Louis Stevenson",
+    "prompt": "Tell me a bio of Robert Louis Stevenson."
+  },
+  {
+    "entity": "José Sánchez del Río",
+    "prompt": "Tell me a bio of José Sánchez del Río."
+  },
+  {
+    "entity": "Sajid Nadiadwala",
+    "prompt": "Tell me a bio of Sajid Nadiadwala."
+  },
+  {
+    "entity": "Toru Muranishi",
+    "prompt": "Tell me a bio of Toru Muranishi."
+  },
+  {
+    "entity": "Mauro Icardi",
+    "prompt": "Tell me a bio of Mauro Icardi."
+  },
+  {
+    "entity": "Florencia Bertotti",
+    "prompt": "Tell me a bio of Florencia Bertotti."
+  },
+  {
+    "entity": "Chris Cheney",
+    "prompt": "Tell me a bio of Chris Cheney."
+  },
+  {
+    "entity": "Eric Hacker",
+    "prompt": "Tell me a bio of Eric Hacker."
+  },
+  {
+    "entity": "Hibo Wardere",
+    "prompt": "Tell me a bio of Hibo Wardere."
+  },
+  {
+    "entity": "Egon Krenz",
+    "prompt": "Tell me a bio of Egon Krenz."
+  },
+  {
+    "entity": "Heinrich Harrer",
+    "prompt": "Tell me a bio of Heinrich Harrer."
+  },
+  {
+    "entity": "Don Featherstone (artist)",
+    "prompt": "Tell me a bio of Don Featherstone (artist)."
+  },
+  {
+    "entity": "Owen Wright (surfer)",
+    "prompt": "Tell me a bio of Owen Wright (surfer)."
+  },
+  {
+    "entity": "Mike Trivisonno",
+    "prompt": "Tell me a bio of Mike Trivisonno."
+  },
+  {
+    "entity": "Daniel Dubois (boxer)",
+    "prompt": "Tell me a bio of Daniel Dubois (boxer)."
+  },
+  {
+    "entity": "Tiffany Haddish",
+    "prompt": "Tell me a bio of Tiffany Haddish."
+  },
+  {
+    "entity": "Craig Morton",
+    "prompt": "Tell me a bio of Craig Morton."
+  },
+  {
+    "entity": "Virginia Valli",
+    "prompt": "Tell me a bio of Virginia Valli."
+  },
+  {
+    "entity": "Kang Daniel",
+    "prompt": "Tell me a bio of Kang Daniel."
+  },
+  {
+    "entity": "Kerser",
+    "prompt": "Tell me a bio of Kerser."
+  },
+  {
+    "entity": "Malcolm Hedding",
+    "prompt": "Tell me a bio of Malcolm Hedding."
+  },
+  {
+    "entity": "Takeo Miki",
+    "prompt": "Tell me a bio of Takeo Miki."
+  },
+  {
+    "entity": "Taika Waititi",
+    "prompt": "Tell me a bio of Taika Waititi."
+  },
+  {
+    "entity": "Lua Blanco",
+    "prompt": "Tell me a bio of Lua Blanco."
+  },
+  {
+    "entity": "Kyu Sakamoto",
+    "prompt": "Tell me a bio of Kyu Sakamoto."
+  },
+  {
+    "entity": "Samantha Ruth Prabhu",
+    "prompt": "Tell me a bio of Samantha Ruth Prabhu."
+  },
+  {
+    "entity": "Dominic King",
+    "prompt": "Tell me a bio of Dominic King."
+  },
+  {
+    "entity": "Henry Santos",
+    "prompt": "Tell me a bio of Henry Santos."
+  },
+  {
+    "entity": "Quintus Sosius Senecio",
+    "prompt": "Tell me a bio of Quintus Sosius Senecio."
+  },
+  {
+    "entity": "Jagan",
+    "prompt": "Tell me a bio of Jagan."
+  },
+  {
+    "entity": "Sian Massey-Ellis",
+    "prompt": "Tell me a bio of Sian Massey-Ellis."
+  },
+  {
+    "entity": "Alexandre Guilmant",
+    "prompt": "Tell me a bio of Alexandre Guilmant."
+  },
+  {
+    "entity": "António de Oliveira Salazar",
+    "prompt": "Tell me a bio of António de Oliveira Salazar."
+  },
+  {
+    "entity": "Jidenna",
+    "prompt": "Tell me a bio of Jidenna."
+  },
+  {
+    "entity": "Rakhi Sawant",
+    "prompt": "Tell me a bio of Rakhi Sawant."
+  },
+  {
+    "entity": "Song Kang",
+    "prompt": "Tell me a bio of Song Kang."
+  },
+  {
+    "entity": "Bridget Moynahan",
+    "prompt": "Tell me a bio of Bridget Moynahan."
+  },
+  {
+    "entity": "Rennie Fritchie, Baroness Fritchie",
+    "prompt": "Tell me a bio of Rennie Fritchie, Baroness Fritchie."
+  },
+  {
+    "entity": "Ji Sung",
+    "prompt": "Tell me a bio of Ji Sung."
+  },
+  {
+    "entity": "Annika Sörenstam",
+    "prompt": "Tell me a bio of Annika Sörenstam."
+  },
+  {
+    "entity": "Kyra Sedgwick",
+    "prompt": "Tell me a bio of Kyra Sedgwick."
+  },
+  {
+    "entity": "Robert Smith, Baron Smith of Kelvin",
+    "prompt": "Tell me a bio of Robert Smith, Baron Smith of Kelvin."
+  },
+  {
+    "entity": "Paul O'Neill (racing driver)",
+    "prompt": "Tell me a bio of Paul O'Neill (racing driver)."
+  },
+  {
+    "entity": "Eliza Dushku",
+    "prompt": "Tell me a bio of Eliza Dushku."
+  },
+  {
+    "entity": "Jonathan Haagensen",
+    "prompt": "Tell me a bio of Jonathan Haagensen."
+  },
+  {
+    "entity": "Beenie Man",
+    "prompt": "Tell me a bio of Beenie Man."
+  },
+  {
+    "entity": "Kim Burrell",
+    "prompt": "Tell me a bio of Kim Burrell."
+  },
+  {
+    "entity": "Errol Flynn",
+    "prompt": "Tell me a bio of Errol Flynn."
+  },
+  {
+    "entity": "Ramesses IV",
+    "prompt": "Tell me a bio of Ramesses IV."
+  },
+  {
+    "entity": "Paul Kruger",
+    "prompt": "Tell me a bio of Paul Kruger."
+  }
+]

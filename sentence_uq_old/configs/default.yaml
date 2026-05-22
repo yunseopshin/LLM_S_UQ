@@ -1,0 +1,37 @@
+model:
+  name: "meta-llama/Meta-Llama-3-8B-Instruct"
+  device: "cuda"
+  dtype: "float16"
+  selected_layers: [0, 8, 12, 16, 20, 24, 28, 32]
+  max_new_tokens: 512
+
+data:
+  entity_list_path: "data/raw/entities.txt"
+  generations_dir: "data/generations"
+  cache_dir: "data/cache"
+  processed_path: "data/processed/annotated.json"
+
+features:
+  projection_dim: 64
+  # k = projection_dim + 2 = 66
+
+training:
+  num_epochs: 50
+  lr: 1.0e-3
+  num_fisher_iters: 10
+  fisher_lambda_init: 1.0e-4
+  eps: 1.0e-6
+  prior_sigma_init: 1.0
+  eval_every: 1
+  pd_check_every: 5
+  early_stopping_patience: 10
+
+splits:
+  train_entities: 350
+  val_entities: 50
+  test_entities: 100
+  seed: 42
+
+output:
+  results_dir: "results"
+  checkpoint_dir: "results/checkpoints"

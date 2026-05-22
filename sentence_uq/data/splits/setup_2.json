@@ -1,0 +1,1108 @@
+{
+  "setup": 2,
+  "seed": 42,
+  "train": [
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jidenna",
+      "prompt": "Tell me a bio of Jidenna.",
+      "prompt_idx": 0
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Quintus Sosius Senecio",
+      "prompt": "Tell me a bio of Quintus Sosius Senecio.",
+      "prompt_idx": 1
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Beenie Man",
+      "prompt": "Tell me a bio of Beenie Man.",
+      "prompt_idx": 2
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Baltasar Corrada del Río",
+      "prompt": "Tell me a bio of Baltasar Corrada del Río.",
+      "prompt_idx": 3
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Frederick Howard Taylor",
+      "prompt": "Tell me a bio of Frederick Howard Taylor.",
+      "prompt_idx": 4
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Maneka Gandhi",
+      "prompt": "Tell me a bio of Maneka Gandhi.",
+      "prompt_idx": 5
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Malcolm Hedding",
+      "prompt": "Tell me a bio of Malcolm Hedding.",
+      "prompt_idx": 6
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Robert Smith, Baron Smith of Kelvin",
+      "prompt": "Tell me a bio of Robert Smith, Baron Smith of Kelvin.",
+      "prompt_idx": 7
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Gabriela Sabatini",
+      "prompt": "Tell me a bio of Gabriela Sabatini.",
+      "prompt_idx": 8
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kim Casali",
+      "prompt": "Tell me a bio of Kim Casali.",
+      "prompt_idx": 9
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kim Burrell",
+      "prompt": "Tell me a bio of Kim Burrell.",
+      "prompt_idx": 10
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Matthew Tukaki",
+      "prompt": "Tell me a bio of Matthew Tukaki.",
+      "prompt_idx": 11
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Henry Santos",
+      "prompt": "Tell me a bio of Henry Santos.",
+      "prompt_idx": 12
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Craig Morton",
+      "prompt": "Tell me a bio of Craig Morton.",
+      "prompt_idx": 13
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Travis Oliphant",
+      "prompt": "Tell me a bio of Travis Oliphant.",
+      "prompt_idx": 14
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Gerardo Fernandez Fe",
+      "prompt": "Tell me a bio of Gerardo Fernandez Fe.",
+      "prompt_idx": 15
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jagan",
+      "prompt": "Tell me a bio of Jagan.",
+      "prompt_idx": 16
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "David Wenham",
+      "prompt": "Tell me a bio of David Wenham.",
+      "prompt_idx": 17
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Carlos Santana",
+      "prompt": "Tell me a bio of Carlos Santana.",
+      "prompt_idx": 18
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Vaira Vīķe-Freiberga",
+      "prompt": "Tell me a bio of Vaira Vīķe-Freiberga.",
+      "prompt_idx": 19
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Daniel Charles",
+      "prompt": "Tell me a bio of Daniel Charles.",
+      "prompt_idx": 20
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Chief Jones",
+      "prompt": "Tell me a bio of Chief Jones.",
+      "prompt_idx": 21
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Taika Waititi",
+      "prompt": "Tell me a bio of Taika Waititi.",
+      "prompt_idx": 22
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Terence Blacker",
+      "prompt": "Tell me a bio of Terence Blacker.",
+      "prompt_idx": 23
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Fernando (footballer, born 1984)",
+      "prompt": "Tell me a bio of Fernando (footballer, born 1984).",
+      "prompt_idx": 24
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Bella Akhmadulina",
+      "prompt": "Tell me a bio of Bella Akhmadulina.",
+      "prompt_idx": 25
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kang Daniel",
+      "prompt": "Tell me a bio of Kang Daniel.",
+      "prompt_idx": 26
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Paul O'Neill (racing driver)",
+      "prompt": "Tell me a bio of Paul O'Neill (racing driver).",
+      "prompt_idx": 27
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Francesco Mimbelli",
+      "prompt": "Tell me a bio of Francesco Mimbelli.",
+      "prompt_idx": 28
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Egon Krenz",
+      "prompt": "Tell me a bio of Egon Krenz.",
+      "prompt_idx": 29
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Milton Diamond",
+      "prompt": "Tell me a bio of Milton Diamond.",
+      "prompt_idx": 30
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Glover Teixeira",
+      "prompt": "Tell me a bio of Glover Teixeira.",
+      "prompt_idx": 31
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kourosh Zolani",
+      "prompt": "Tell me a bio of Kourosh Zolani.",
+      "prompt_idx": 32
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Liam Payne",
+      "prompt": "Tell me a bio of Liam Payne.",
+      "prompt_idx": 33
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Gonzalo Fonseca",
+      "prompt": "Tell me a bio of Gonzalo Fonseca.",
+      "prompt_idx": 34
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Julia Faye",
+      "prompt": "Tell me a bio of Julia Faye.",
+      "prompt_idx": 35
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ra Jong-yil",
+      "prompt": "Tell me a bio of Ra Jong-yil.",
+      "prompt_idx": 36
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Rennie Fritchie, Baroness Fritchie",
+      "prompt": "Tell me a bio of Rennie Fritchie, Baroness Fritchie.",
+      "prompt_idx": 37
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Shahnaz Pahlavi",
+      "prompt": "Tell me a bio of Shahnaz Pahlavi.",
+      "prompt_idx": 38
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "António de Oliveira Salazar",
+      "prompt": "Tell me a bio of António de Oliveira Salazar.",
+      "prompt_idx": 39
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Takeo Miki",
+      "prompt": "Tell me a bio of Takeo Miki.",
+      "prompt_idx": 40
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Vincenzo Tusa",
+      "prompt": "Tell me a bio of Vincenzo Tusa.",
+      "prompt_idx": 41
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Chris Cheney",
+      "prompt": "Tell me a bio of Chris Cheney.",
+      "prompt_idx": 42
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Hibo Wardere",
+      "prompt": "Tell me a bio of Hibo Wardere.",
+      "prompt_idx": 43
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Lanny Flaherty",
+      "prompt": "Tell me a bio of Lanny Flaherty.",
+      "prompt_idx": 44
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Toru Muranishi",
+      "prompt": "Tell me a bio of Toru Muranishi.",
+      "prompt_idx": 45
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jesse Foppert",
+      "prompt": "Tell me a bio of Jesse Foppert.",
+      "prompt_idx": 46
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Nikki Sixx",
+      "prompt": "Tell me a bio of Nikki Sixx.",
+      "prompt_idx": 47
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Heinrich Harrer",
+      "prompt": "Tell me a bio of Heinrich Harrer.",
+      "prompt_idx": 48
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Taral Hicks",
+      "prompt": "Tell me a bio of Taral Hicks.",
+      "prompt_idx": 49
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Scientist (musician)",
+      "prompt": "Tell me a bio of Scientist (musician).",
+      "prompt_idx": 50
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Elsa Pataky",
+      "prompt": "Tell me a bio of Elsa Pataky.",
+      "prompt_idx": 51
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Abdou Diallo",
+      "prompt": "Tell me a bio of Abdou Diallo.",
+      "prompt_idx": 52
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Chadwick Boseman",
+      "prompt": "Tell me a bio of Chadwick Boseman.",
+      "prompt_idx": 53
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Prince Rivers",
+      "prompt": "Tell me a bio of Prince Rivers.",
+      "prompt_idx": 54
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jonathan Tucker",
+      "prompt": "Tell me a bio of Jonathan Tucker.",
+      "prompt_idx": 55
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "James B. Donovan",
+      "prompt": "Tell me a bio of James B. Donovan.",
+      "prompt_idx": 56
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Sian Massey-Ellis",
+      "prompt": "Tell me a bio of Sian Massey-Ellis.",
+      "prompt_idx": 57
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Carolina Portesi Peroni",
+      "prompt": "Tell me a bio of Carolina Portesi Peroni.",
+      "prompt_idx": 58
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Anna May Wong",
+      "prompt": "Tell me a bio of Anna May Wong.",
+      "prompt_idx": 59
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Virginia Valli",
+      "prompt": "Tell me a bio of Virginia Valli.",
+      "prompt_idx": 60
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jimmy Bartel",
+      "prompt": "Tell me a bio of Jimmy Bartel.",
+      "prompt_idx": 61
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "María Elena Medina-Mora Icaza",
+      "prompt": "Tell me a bio of María Elena Medina-Mora Icaza.",
+      "prompt_idx": 62
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Lees Knowles",
+      "prompt": "Tell me a bio of Lees Knowles.",
+      "prompt_idx": 63
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Rakhi Sawant",
+      "prompt": "Tell me a bio of Rakhi Sawant.",
+      "prompt_idx": 64
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "George Cukor",
+      "prompt": "Tell me a bio of George Cukor.",
+      "prompt_idx": 65
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Gilberto Silva",
+      "prompt": "Tell me a bio of Gilberto Silva.",
+      "prompt_idx": 66
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ji Sung",
+      "prompt": "Tell me a bio of Ji Sung.",
+      "prompt_idx": 67
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Antonio Gasalla",
+      "prompt": "Tell me a bio of Antonio Gasalla.",
+      "prompt_idx": 68
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Paul Kruger",
+      "prompt": "Tell me a bio of Paul Kruger.",
+      "prompt_idx": 69
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Regina Martínez Pérez",
+      "prompt": "Tell me a bio of Regina Martínez Pérez.",
+      "prompt_idx": 70
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kyu Sakamoto",
+      "prompt": "Tell me a bio of Kyu Sakamoto.",
+      "prompt_idx": 71
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Song Kang",
+      "prompt": "Tell me a bio of Song Kang.",
+      "prompt_idx": 72
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Martín Lousteau",
+      "prompt": "Tell me a bio of Martín Lousteau.",
+      "prompt_idx": 73
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ben Lummis",
+      "prompt": "Tell me a bio of Ben Lummis.",
+      "prompt_idx": 74
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Alexandre Guilmant",
+      "prompt": "Tell me a bio of Alexandre Guilmant.",
+      "prompt_idx": 75
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Shayne Neumann",
+      "prompt": "Tell me a bio of Shayne Neumann.",
+      "prompt_idx": 76
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Dacre Montgomery",
+      "prompt": "Tell me a bio of Dacre Montgomery.",
+      "prompt_idx": 77
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Emmett Skilton",
+      "prompt": "Tell me a bio of Emmett Skilton.",
+      "prompt_idx": 78
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Eliza Dushku",
+      "prompt": "Tell me a bio of Eliza Dushku.",
+      "prompt_idx": 79
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Mike Trivisonno",
+      "prompt": "Tell me a bio of Mike Trivisonno.",
+      "prompt_idx": 80
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Doug Sheehan",
+      "prompt": "Tell me a bio of Doug Sheehan.",
+      "prompt_idx": 81
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Lily Branscombe",
+      "prompt": "Tell me a bio of Lily Branscombe.",
+      "prompt_idx": 82
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Botak Chin",
+      "prompt": "Tell me a bio of Botak Chin.",
+      "prompt_idx": 83
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Alberto Malesani",
+      "prompt": "Tell me a bio of Alberto Malesani.",
+      "prompt_idx": 84
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Owen Wright (surfer)",
+      "prompt": "Tell me a bio of Owen Wright (surfer).",
+      "prompt_idx": 85
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Lua Blanco",
+      "prompt": "Tell me a bio of Lua Blanco.",
+      "prompt_idx": 86
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Sajid Nadiadwala",
+      "prompt": "Tell me a bio of Sajid Nadiadwala.",
+      "prompt_idx": 87
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Daniel Dubois (boxer)",
+      "prompt": "Tell me a bio of Daniel Dubois (boxer).",
+      "prompt_idx": 88
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Lewis Nkosi",
+      "prompt": "Tell me a bio of Lewis Nkosi.",
+      "prompt_idx": 89
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "José Sánchez del Río",
+      "prompt": "Tell me a bio of José Sánchez del Río.",
+      "prompt_idx": 90
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Roberto Clemente",
+      "prompt": "Tell me a bio of Roberto Clemente.",
+      "prompt_idx": 91
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Mitzi Gaynor",
+      "prompt": "Tell me a bio of Mitzi Gaynor.",
+      "prompt_idx": 92
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Luis Guillermo Rivera",
+      "prompt": "Tell me a bio of Luis Guillermo Rivera.",
+      "prompt_idx": 93
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Eric Hacker",
+      "prompt": "Tell me a bio of Eric Hacker.",
+      "prompt_idx": 94
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Annika Sörenstam",
+      "prompt": "Tell me a bio of Annika Sörenstam.",
+      "prompt_idx": 95
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jessica Barboza",
+      "prompt": "Tell me a bio of Jessica Barboza.",
+      "prompt_idx": 96
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Waruhiu Itote",
+      "prompt": "Tell me a bio of Waruhiu Itote.",
+      "prompt_idx": 97
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jack Leach",
+      "prompt": "Tell me a bio of Jack Leach.",
+      "prompt_idx": 98
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Roxana Díaz (athlete)",
+      "prompt": "Tell me a bio of Roxana Díaz (athlete).",
+      "prompt_idx": 99
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Nisar Ahmad Kakru",
+      "prompt": "Tell me a bio of Nisar Ahmad Kakru.",
+      "prompt_idx": 100
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Rob Furlong",
+      "prompt": "Tell me a bio of Rob Furlong.",
+      "prompt_idx": 101
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Toyoko Tokiwa",
+      "prompt": "Tell me a bio of Toyoko Tokiwa.",
+      "prompt_idx": 102
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Errol Flynn",
+      "prompt": "Tell me a bio of Errol Flynn.",
+      "prompt_idx": 103
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Samuel Oboh",
+      "prompt": "Tell me a bio of Samuel Oboh.",
+      "prompt_idx": 104
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Tiffany Haddish",
+      "prompt": "Tell me a bio of Tiffany Haddish.",
+      "prompt_idx": 105
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Shashank Manohar",
+      "prompt": "Tell me a bio of Shashank Manohar.",
+      "prompt_idx": 106
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Zamfir Arbore",
+      "prompt": "Tell me a bio of Zamfir Arbore.",
+      "prompt_idx": 107
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Thomas Houghton (rugby league)",
+      "prompt": "Tell me a bio of Thomas Houghton (rugby league).",
+      "prompt_idx": 108
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Wendy (singer)",
+      "prompt": "Tell me a bio of Wendy (singer).",
+      "prompt_idx": 109
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Chaim Malinowitz",
+      "prompt": "Tell me a bio of Chaim Malinowitz.",
+      "prompt_idx": 110
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Robert Louis Stevenson",
+      "prompt": "Tell me a bio of Robert Louis Stevenson.",
+      "prompt_idx": 111
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Michael Valpy",
+      "prompt": "Tell me a bio of Michael Valpy.",
+      "prompt_idx": 112
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Alma Katsu",
+      "prompt": "Tell me a bio of Alma Katsu.",
+      "prompt_idx": 113
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Antonio Diaz (Filipino politician)",
+      "prompt": "Tell me a bio of Antonio Diaz (Filipino politician).",
+      "prompt_idx": 114
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Samantha Ruth Prabhu",
+      "prompt": "Tell me a bio of Samantha Ruth Prabhu.",
+      "prompt_idx": 115
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ylona Garcia",
+      "prompt": "Tell me a bio of Ylona Garcia.",
+      "prompt_idx": 116
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Fran Unsworth",
+      "prompt": "Tell me a bio of Fran Unsworth.",
+      "prompt_idx": 117
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Joey D. Vieira",
+      "prompt": "Tell me a bio of Joey D. Vieira.",
+      "prompt_idx": 118
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Lina Medina",
+      "prompt": "Tell me a bio of Lina Medina.",
+      "prompt_idx": 119
+    }
+  ],
+  "val": [
+    {
+      "dataset": "factscore_bio",
+      "entity": "Anushka Sharma",
+      "prompt": "Tell me a bio of Anushka Sharma.",
+      "prompt_idx": 0
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Desmond Luke",
+      "prompt": "Tell me a bio of Desmond Luke.",
+      "prompt_idx": 1
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Carlos Alfonso",
+      "prompt": "Tell me a bio of Carlos Alfonso.",
+      "prompt_idx": 2
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kerser",
+      "prompt": "Tell me a bio of Kerser.",
+      "prompt_idx": 3
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Tim Fischer",
+      "prompt": "Tell me a bio of Tim Fischer.",
+      "prompt_idx": 4
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Osama bin Laden",
+      "prompt": "Tell me a bio of Osama bin Laden.",
+      "prompt_idx": 5
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jonathan Haagensen",
+      "prompt": "Tell me a bio of Jonathan Haagensen.",
+      "prompt_idx": 6
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jean Daullé",
+      "prompt": "Tell me a bio of Jean Daullé.",
+      "prompt_idx": 7
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kyra Sedgwick",
+      "prompt": "Tell me a bio of Kyra Sedgwick.",
+      "prompt_idx": 8
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Daniel Carvalho",
+      "prompt": "Tell me a bio of Daniel Carvalho.",
+      "prompt_idx": 9
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Augusto Martínez Sánchez",
+      "prompt": "Tell me a bio of Augusto Martínez Sánchez.",
+      "prompt_idx": 10
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Rin Iwanaga",
+      "prompt": "Tell me a bio of Rin Iwanaga.",
+      "prompt_idx": 11
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Don Featherstone (artist)",
+      "prompt": "Tell me a bio of Don Featherstone (artist).",
+      "prompt_idx": 12
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "IU (singer)",
+      "prompt": "Tell me a bio of IU (singer).",
+      "prompt_idx": 13
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Mauro Icardi",
+      "prompt": "Tell me a bio of Mauro Icardi.",
+      "prompt_idx": 14
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Vanessa Kirby",
+      "prompt": "Tell me a bio of Vanessa Kirby.",
+      "prompt_idx": 15
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ramesses IV",
+      "prompt": "Tell me a bio of Ramesses IV.",
+      "prompt_idx": 16
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Dominic King",
+      "prompt": "Tell me a bio of Dominic King.",
+      "prompt_idx": 17
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Luis N. Rivera-Pagán",
+      "prompt": "Tell me a bio of Luis N. Rivera-Pagán.",
+      "prompt_idx": 18
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Canelo Álvarez",
+      "prompt": "Tell me a bio of Canelo Álvarez.",
+      "prompt_idx": 19
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Roselyn Sánchez",
+      "prompt": "Tell me a bio of Roselyn Sánchez.",
+      "prompt_idx": 20
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Lauren London",
+      "prompt": "Tell me a bio of Lauren London.",
+      "prompt_idx": 21
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Harrison Ford",
+      "prompt": "Tell me a bio of Harrison Ford.",
+      "prompt_idx": 22
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Florencia Bertotti",
+      "prompt": "Tell me a bio of Florencia Bertotti.",
+      "prompt_idx": 23
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Manuel Salazar (footballer)",
+      "prompt": "Tell me a bio of Manuel Salazar (footballer).",
+      "prompt_idx": 24
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Bridget Moynahan",
+      "prompt": "Tell me a bio of Bridget Moynahan.",
+      "prompt_idx": 25
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Garrincha",
+      "prompt": "Tell me a bio of Garrincha.",
+      "prompt_idx": 26
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Besant Ravi",
+      "prompt": "Tell me a bio of Besant Ravi.",
+      "prompt_idx": 27
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Hesham Nazih",
+      "prompt": "Tell me a bio of Hesham Nazih.",
+      "prompt_idx": 28
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ronaldo (Brazilian footballer)",
+      "prompt": "Tell me a bio of Ronaldo (Brazilian footballer).",
+      "prompt_idx": 29
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Mohamed Salah",
+      "prompt": "Tell me a bio of Mohamed Salah.",
+      "prompt_idx": 30
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Marie Alexandrine Becker",
+      "prompt": "Tell me a bio of Marie Alexandrine Becker.",
+      "prompt_idx": 31
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Damir Memović",
+      "prompt": "Tell me a bio of Damir Memović.",
+      "prompt_idx": 32
+    }
+  ],
+  "test": [
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kang Ji-hwan",
+      "prompt": "Tell me a bio of Kang Ji-hwan.",
+      "prompt_idx": 0
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kalki Koechlin",
+      "prompt": "Tell me a bio of Kalki Koechlin.",
+      "prompt_idx": 1
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "William Post",
+      "prompt": "Tell me a bio of William Post.",
+      "prompt_idx": 2
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "William Waldegrave, Baron Waldegrave of North Hill",
+      "prompt": "Tell me a bio of William Waldegrave, Baron Waldegrave of North Hill.",
+      "prompt_idx": 3
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Darrius Heyward-Bey",
+      "prompt": "Tell me a bio of Darrius Heyward-Bey.",
+      "prompt_idx": 4
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Andrew Shue",
+      "prompt": "Tell me a bio of Andrew Shue.",
+      "prompt_idx": 5
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Wahida Prism Khan",
+      "prompt": "Tell me a bio of Wahida Prism Khan.",
+      "prompt_idx": 6
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Waka Flocka Flame",
+      "prompt": "Tell me a bio of Waka Flocka Flame.",
+      "prompt_idx": 7
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Focus...",
+      "prompt": "Tell me a bio of Focus....",
+      "prompt_idx": 8
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Sara Paxton",
+      "prompt": "Tell me a bio of Sara Paxton.",
+      "prompt_idx": 9
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Marianne McAndrew",
+      "prompt": "Tell me a bio of Marianne McAndrew.",
+      "prompt_idx": 10
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Keita Kadokura",
+      "prompt": "Tell me a bio of Keita Kadokura.",
+      "prompt_idx": 11
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "John Estes",
+      "prompt": "Tell me a bio of John Estes.",
+      "prompt_idx": 12
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Oliver Letwin",
+      "prompt": "Tell me a bio of Oliver Letwin.",
+      "prompt_idx": 13
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ram Gopal Varma",
+      "prompt": "Tell me a bio of Ram Gopal Varma.",
+      "prompt_idx": 14
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "James Taylor",
+      "prompt": "Tell me a bio of James Taylor.",
+      "prompt_idx": 15
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Joeri Adams",
+      "prompt": "Tell me a bio of Joeri Adams.",
+      "prompt_idx": 16
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Cha Seung-won",
+      "prompt": "Tell me a bio of Cha Seung-won.",
+      "prompt_idx": 17
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Ko Itakura",
+      "prompt": "Tell me a bio of Ko Itakura.",
+      "prompt_idx": 18
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Siti Rahmah Kassim",
+      "prompt": "Tell me a bio of Siti Rahmah Kassim.",
+      "prompt_idx": 19
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Andreas Kisser",
+      "prompt": "Tell me a bio of Andreas Kisser.",
+      "prompt_idx": 20
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Sharad Kumar (athlete)",
+      "prompt": "Tell me a bio of Sharad Kumar (athlete).",
+      "prompt_idx": 21
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Idriss Ngari",
+      "prompt": "Tell me a bio of Idriss Ngari.",
+      "prompt_idx": 22
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Gerhard Fischer (inventor)",
+      "prompt": "Tell me a bio of Gerhard Fischer (inventor).",
+      "prompt_idx": 23
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Katsunosuke Hori",
+      "prompt": "Tell me a bio of Katsunosuke Hori.",
+      "prompt_idx": 24
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Zelma Wilson",
+      "prompt": "Tell me a bio of Zelma Wilson.",
+      "prompt_idx": 25
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Adil Rami",
+      "prompt": "Tell me a bio of Adil Rami.",
+      "prompt_idx": 26
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Richard Burkewood Welbourn",
+      "prompt": "Tell me a bio of Richard Burkewood Welbourn.",
+      "prompt_idx": 27
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Miguel Díaz (baseball)",
+      "prompt": "Tell me a bio of Miguel Díaz (baseball).",
+      "prompt_idx": 28
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Teresa Palmer",
+      "prompt": "Tell me a bio of Teresa Palmer.",
+      "prompt_idx": 29
+    }
+  ]
+}

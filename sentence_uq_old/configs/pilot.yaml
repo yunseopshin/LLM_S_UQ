@@ -1,0 +1,9 @@
+defaults: "default.yaml"  # (실제로 상속 로직은 utils/io.py에서 구현)
+
+splits:
+  train_entities: 35
+  val_entities: 5
+  test_entities: 10
+
+training:
+  num_epochs: 20  # pilot은 빨리

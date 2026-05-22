@@ -1,0 +1,35 @@
+# Pilot configuration (small-scale smoke test).
+# Inherits the same dataset layout as default.yaml; downstream phases will
+# subsample to a handful of entities/prompts.
+
+model:
+  name: meta-llama/Meta-Llama-3-8B-Instruct
+  selected_layers: null
+  dtype: bfloat16
+
+dataset:
+  setup: 2
+  factscore_bio_dir: data/raw/factscore_bio
+  longfact_dir: data/raw/longfact
+  splits_dir: data/splits
+  split_file: null
+  seed: 42
+  pilot_size: 5                     # number of entities/prompts for pilot runs
+
+generation:
+  factscore_bio_dir: data/generations/factscore_bio
+  longfact_dir: data/generations/longfact
+  max_new_tokens: 256
+  temperature: 0.7
+  top_p: 1.0
+  batch_size: 1
+
+cache:
+  factscore_bio_dir: data/cache/factscore_bio
+  longfact_dir: data/cache/longfact
+
+processed:
+  factscore_bio_dir: data/processed/factscore_bio
+  longfact_dir: data/processed/longfact
+
+results_dir: results/pilot
