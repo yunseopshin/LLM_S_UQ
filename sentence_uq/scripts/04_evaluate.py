@@ -90,6 +90,7 @@ from src.features.extractor import (  # noqa: E402
 from src.inference.predict import Predictor, load_trained_model  # noqa: E402
 from src.models.bayesian_main import BayesianSentenceUQ  # noqa: E402
 from src.train.trainer import SentenceUQTrainer  # noqa: E402
+from src.utils.validation import validate_binomial_counts  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -551,7 +552,8 @@ def _baseline_rows(
     ratio_rows: List[Dict[str, Any]] = []
     strict_rows: List[Dict[str, Any]] = []
     U_pos = K_pos / np.maximum(m_pos, 1.0)
-    A_pos = (K_pos >= m_pos).astype(np.float64)
+    # Phase 7-3 fix 4: strict factuality is K == m (all atoms supported).
+    A_pos = (K_pos == m_pos).astype(np.float64)
 
     pool = baselines.get("baselines", {}) if "baselines" in baselines else {}
     for name, payload in pool.items():
@@ -759,7 +761,8 @@ def _ablation_binom_vs_bernoulli(
         ``binomial_NLL``, ``ratio_MAE``, ``strict_ECE``, ``strict_AUROC``.
     """
     U = K / np.maximum(m, 1.0)
-    A = (K >= m).astype(np.float64)
+    # Phase 7-3 fix 4: strict factuality is K == m.
+    A = (K == m).astype(np.float64)
 
     binom = compute_ratio_level_metrics(U, mu_hat, m_j=m)
     binom_strict = compute_calibration_metrics(A, p_strict, n_bins=10)
@@ -876,7 +879,8 @@ def _save_reliability_diagrams(
     """Per-method reliability diagrams for both tiers."""
     out_dir.mkdir(parents=True, exist_ok=True)
     U = K_pos / np.maximum(m_pos, 1.0)
-    A = (K_pos >= m_pos).astype(np.float64)
+    # Phase 7-3 fix 4: strict factuality is K == m.
+    A = (K_pos == m_pos).astype(np.float64)
     for name, pack in pool.items():
         mu = pack["mu_hat"]
         p = pack["p_strict"]
@@ -993,8 +997,10 @@ def _evaluate_single_setup(
     m_pos = np.array(
         [int(r["m_j"]) for r in test_records], dtype=np.float64
     )
+    validate_binomial_counts(K_pos, m_pos, context="04_evaluate.main")
     U_pos = K_pos / np.maximum(m_pos, 1.0)
-    A_pos = (K_pos >= m_pos).astype(np.float64)
+    # Phase 7-3 fix 4: strict factuality is K == m.
+    A_pos = (K_pos == m_pos).astype(np.float64)
 
     # --- Feature extraction (shared across all "Ours" variants) ------------
     z_tokens_list: List[torch.Tensor] = [

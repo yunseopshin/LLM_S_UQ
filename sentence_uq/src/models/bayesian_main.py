@@ -285,7 +285,9 @@ def verify_local_pd(
     all_m: torch.Tensor,
     mu_0: torch.Tensor,
     Sigma_0_inv: torch.Tensor,
-    eps: float = 1e-6,
+    clip_eps: float = 1e-6,
+    pd_tol: float = 1e-8,
+    eps: Optional[float] = None,
 ) -> Dict[str, float]:
     """Check positive-definiteness of both precision matrices at ``θ̂``.
 
@@ -302,6 +304,12 @@ def verify_local_pd(
        :func:`_compute_clipped_objective`. Expensive (``O(k²)`` backward
        passes), hence the spec recommends invoking this every ~5 epochs.
 
+    Phase 7-3 fix 8: the log-clip ``ε`` and the eigenvalue positivity
+    threshold are conceptually different — the former is a numerical
+    stabiliser inside the objective and gradient, the latter is the
+    decision rule for "positive definite". They are now exposed as
+    separate ``clip_eps`` and ``pd_tol`` knobs.
+
     Parameters
     ----------
     theta_hat : Tensor of shape ``(k,)``.
@@ -311,9 +319,20 @@ def verify_local_pd(
     all_m : Tensor of shape ``(N,)``, integer dtype.
     mu_0 : Tensor of shape ``(k,)``.
     Sigma_0_inv : Tensor of shape ``(k, k)``.
+    clip_eps : float, optional
+        Log-stability clip ``ε`` forwarded to
+        :func:`_compute_grad_and_fisher` and
+        :func:`_compute_clipped_objective`. Default ``1e-6``.
+    pd_tol : float, optional
+        Positivity threshold on the smallest eigenvalue. A precision
+        matrix is considered PD when ``min_eig > pd_tol``. Default
+        ``1e-8`` — looser than ``clip_eps`` because near-zero eigenvalues
+        are an algorithmic concern about Laplace validity, not a
+        numerical-overflow concern.
     eps : float, optional
-        Both the log clip ``ε`` (re-passed to the helpers) and the
-        positive-definiteness threshold on the smallest eigenvalue.
+        Legacy single-knob alias. When passed, it sets ``clip_eps`` to
+        the given value and leaves ``pd_tol`` at its default. Retained
+        for callers that have not yet adopted the split signature.
 
     Returns
     -------
@@ -322,10 +341,13 @@ def verify_local_pd(
           Fisher-type precision.
         - ``true_min_eig`` (float): smallest eigenvalue of
           ``-∇²_θ L̃(θ̂)``.
-        - ``fisher_pd`` (bool): ``fisher_min_eig > eps``.
-        - ``true_pd`` (bool): ``true_min_eig > eps``.
+        - ``fisher_pd`` (bool): ``fisher_min_eig > pd_tol``.
+        - ``true_pd`` (bool): ``true_min_eig > pd_tol``.
         - ``laplace_valid_local`` (bool): both PD.
     """
+    if eps is not None:
+        clip_eps = float(eps)
+
     theta_d = theta_hat.detach()
     z_d = [z.detach() for z in all_z_tokens]
     mu_0_d = mu_0.detach()
@@ -334,7 +356,7 @@ def verify_local_pd(
     # ---- Fisher-type precision (no autograd needed) ----
     with torch.no_grad():
         _, H_fisher = _compute_grad_and_fisher(
-            theta_d, z_d, all_K, all_m, mu_0_d, Sigma_0_inv_d, eps
+            theta_d, z_d, all_K, all_m, mu_0_d, Sigma_0_inv_d, clip_eps
         )
     H_fisher_sym = 0.5 * (H_fisher + H_fisher.T)
     fisher_eigs = torch.linalg.eigvalsh(H_fisher_sym)
@@ -343,7 +365,7 @@ def verify_local_pd(
     # ---- True precision = -Hessian(L̃) at θ̂ ----
     def objective_fn(t: torch.Tensor) -> torch.Tensor:
         return _compute_clipped_objective(
-            t, z_d, all_K, all_m, mu_0_d, Sigma_0_inv_d, eps
+            t, z_d, all_K, all_m, mu_0_d, Sigma_0_inv_d, clip_eps
         )
 
     H_true = torch.autograd.functional.hessian(objective_fn, theta_d)
@@ -352,8 +374,8 @@ def verify_local_pd(
     true_eigs = torch.linalg.eigvalsh(true_prec_sym)
     true_min_eig = float(true_eigs.min().item())
 
-    fisher_pd = fisher_min_eig > eps
-    true_pd = true_min_eig > eps
+    fisher_pd = fisher_min_eig > pd_tol
+    true_pd = true_min_eig > pd_tol
 
     return {
         "fisher_min_eig": fisher_min_eig,

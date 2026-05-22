@@ -56,6 +56,7 @@ from torch import Tensor
 
 from src.features.extractor import extract_sentence_token_features
 from src.models.bayesian_main import BayesianSentenceUQ, verify_local_pd
+from src.models.fisher_scoring import _last_diagnostics as _fisher_diagnostics
 from src.utils.validation import validate_binomial_counts
 
 
@@ -403,10 +404,19 @@ class SentenceUQTrainer:
             train_stats = self.train_epoch(train_data)
             history["train_loss"].append(train_stats["loss"])
 
+            bf = float(_fisher_diagnostics.get("boundary_fraction", 0.0))
+            if bf > 0.05:
+                self.log_fn(
+                    f"[epoch {epoch:3d}/{self.num_epochs}] "
+                    f"WARNING: boundary fraction {bf:.1%} exceeds 5% "
+                    "— consider tightening the prior (reduce prior_sigma)"
+                )
+
             log_line = (
                 f"[epoch {epoch:3d}/{self.num_epochs}] "
                 f"loss={train_stats['loss']:.4f} "
-                f"(N+={train_stats['num_positive']})"
+                f"(N+={train_stats['num_positive']}) "
+                f"bf={bf:.1%}"
             )
 
             do_eval = (
@@ -668,7 +678,16 @@ class SentenceUQTrainer:
         rel_path: str,
         cache_idx: int,
     ) -> Tuple[Tensor, Tensor, Tensor]:
-        """Load ``(hidden_states, entropy, top1)`` for one prompt."""
+        """Load ``(hidden_states, entropy, top1)`` for one prompt.
+
+        Phase 7-3 fix 5: cache files are indexed by sorted position in the
+        generations directory. If that directory changes (files added,
+        removed, or renamed) between ``cache_scalars_for_directory`` and a
+        training run, the integer index silently points at the wrong row.
+        We verify the cache payload's ``source_path`` matches ``rel_path``
+        and that ``token_ids`` agrees with the generation file before
+        returning. Either mismatch raises :class:`ValueError`.
+        """
         gen_path = gen_dir / rel_path
         gen_payload = torch.load(gen_path, map_location="cpu", weights_only=False)
         hidden_states = gen_payload["hidden_states"]
@@ -677,6 +696,26 @@ class SentenceUQTrainer:
         cache_payload = torch.load(
             cache_path, map_location="cpu", weights_only=False
         )
+
+        cached_source = cache_payload.get("source_path", "")
+        if cached_source and cached_source != rel_path:
+            raise ValueError(
+                f"Cache/source mismatch at idx {cache_idx}: "
+                f"cache has '{cached_source}', expected '{rel_path}'"
+            )
+
+        cached_token_ids = cache_payload.get("token_ids")
+        gen_token_ids = gen_payload.get("token_ids")
+        if cached_token_ids is not None and gen_token_ids is not None:
+            cached_long = cached_token_ids.to(torch.long)
+            gen_long = gen_token_ids.to(torch.long)
+            if cached_long.shape != gen_long.shape or not torch.equal(
+                cached_long, gen_long
+            ):
+                raise ValueError(
+                    f"Cache token_ids mismatch for {rel_path} at idx {cache_idx}"
+                )
+
         entropy = cache_payload["entropy"]
         top1 = cache_payload["top1_prob"]
 

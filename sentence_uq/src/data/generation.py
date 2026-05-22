@@ -26,9 +26,15 @@ Saved tensor layout for one prompt (single ``.pt`` file)::
 
 Notes
 -----
-- ``hidden_states[t, k, :]`` is the hidden state at layer ``selected_layers[k]``
-  produced when generated token ``t`` was the input. By the standard causal-LM
-  convention this is the state used to predict ``token_ids[t+1]`` (or EOS).
+- ``hidden_states[t, k, :]`` is the hidden state at layer
+  ``selected_layers[k]`` produced when generated token ``t`` was the
+  input — i.e. the state conditioned on ``x_{≤t}``.
+- ``logits[t]`` is the distribution that **sampled** ``token_ids[t]``
+  (Phase 7-3 fix 1). Equivalently, ``logits[t]`` is the model output
+  at the previous position, conditioned on ``x_{<t}``. So
+  ``entropy[t] = H(x_t | x_{<t})`` and
+  ``top1_prob[t] = p^{(1)}(x_t | x_{<t})`` are the **generation-time**
+  uncertainty of the current token, not next-token uncertainty.
 - HuggingFace returns ``output.hidden_states`` as a tuple of length
   ``num_hidden_layers + 1``: index 0 is the embedding-layer output and
   index ``num_hidden_layers`` is the final transformer-block output. The
@@ -417,9 +423,10 @@ def generate_with_hidden_states(
     )
     past_key_values = prefill.past_key_values
     # Logits at the last prompt position predict the first generated token.
-    next_token = _sample_token(
-        prefill.logits[:, -1, :], temperature, top_p, do_sample
-    )
+    # Phase 7-3 fix 1: these are also the logits that *sample* the first
+    # generated token, so they are what should be stored as ``logits[0]``.
+    prev_logits = prefill.logits[:, -1, :]
+    next_token = _sample_token(prev_logits, temperature, top_p, do_sample)
 
     eos_ids = set(_collect_eos_ids(tokenizer))
 
@@ -434,6 +441,13 @@ def generate_with_hidden_states(
             finished = True
             break
 
+        # Phase 7-3 fix 1: store the logits that PRODUCED this token
+        # (generation-time distribution conditioned on x_{<t}) — not the
+        # logits the model emits *after* processing it.
+        gen_logits.append(
+            prev_logits[0].detach().to("cpu", dtype=store_dtype)
+        )
+
         step = model(
             input_ids=next_token.view(1, 1),
             past_key_values=past_key_values,
@@ -443,17 +457,18 @@ def generate_with_hidden_states(
         past_key_values = step.past_key_values
 
         # step.hidden_states is a tuple of (1, 1, D) tensors, one per layer.
+        # These are the states *after* processing the current token
+        # (conditioning x_{≤t}).
         for k, layer_idx in enumerate(selected):
             h = step.hidden_states[layer_idx][0, 0, :].detach()
             gen_hidden_per_layer[k].append(h.to("cpu", dtype=store_dtype))
-        gen_logits.append(
-            step.logits[0, -1, :].detach().to("cpu", dtype=store_dtype)
-        )
         gen_token_ids.append(token_id_int)
 
-        next_token = _sample_token(
-            step.logits[:, -1, :], temperature, top_p, do_sample
-        )
+        # step.logits[:, -1, :] now predicts the NEXT token; carry it
+        # forward as ``prev_logits`` so the next iteration stores it as
+        # ``gen_logits[t+1]``.
+        prev_logits = step.logits[:, -1, :]
+        next_token = _sample_token(prev_logits, temperature, top_p, do_sample)
 
     T = len(gen_token_ids)
     if T == 0:

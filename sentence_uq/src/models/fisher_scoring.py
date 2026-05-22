@@ -21,15 +21,21 @@ Clipped binomial log-posterior (skip sentences with ``m_j = 0``)::
             - 0.5 (θ - μ_0)ᵀ Σ_0⁻¹ (θ - μ_0),
     μ̃_j  = clip(μ_j, ε, 1 - ε)
 
-Gradient::
+Epsilon-stabilized gradient (§7.2.2 of research_document_v8)::
 
-    ∇L̃ = -Σ_0⁻¹ (θ - μ_0) + Σ_j R_j^bin · g_j,
-    R_j^bin = (K_j - m_j μ̃_j) / (μ̃_j (1 - μ̃_j)),
+    ∇L̃ ≈ -Σ_0⁻¹ (θ - μ_0) + Σ_j R_j^ε · g_j,
+    R_j^ε   = (K_j - m_j μ_j) / max(μ_j (1 - μ_j), ε),
     g_j     = (1 / L_j) Σ_ℓ π_ℓ (1 - π_ℓ) z_ℓ
 
-Fisher-type precision (m_j-weighted)::
+Note: this is NOT the true gradient of the clipped objective L̃. At
+clipping boundaries the true clipped gradient would be zero for the
+affected sentence; the implementation instead stabilises only the
+denominator, keeping every sentence contributing to the gradient. The
+clipped objective L̃ is used only for line-search accept/reject.
 
-    H_fisher = Σ_0⁻¹ + Σ_j (m_j / (μ̃_j (1 - μ̃_j))) · g_j g_jᵀ
+Fisher-type precision (m_j-weighted, denominator stabilised the same way)::
+
+    H_fisher = Σ_0⁻¹ + Σ_j (m_j / max(μ_j (1 - μ_j), ε)) · g_j g_jᵀ
 
 Damped Fisher-scoring update with adaptive damping λ::
 
@@ -66,7 +72,27 @@ __all__ = [
     "_compute_grad_and_fisher",
     "fisher_scoring_map",
     "fisher_scoring_map_detached",
+    "_last_diagnostics",
 ]
+
+
+#: Diagnostics from the most recent ``_compute_grad_and_fisher`` call.
+#:
+#: Populated as a side effect so that callers (the trainer's epoch loop,
+#: notebooks) can read post-hoc statistics without changing the public
+#: return signature. Keys:
+#:
+#: * ``boundary_fraction`` — fraction of ``m_j > 0`` sentences whose raw
+#:   ``μ_j`` falls outside ``(eps, 1 - eps)`` (i.e. where the denominator
+#:   stabiliser is active).
+#: * ``boundary_count``    — numerator of the above ratio.
+#: * ``total_sentences``   — denominator of the above ratio (sentences with
+#:   ``m_j > 0`` that contributed to the gradient).
+_last_diagnostics: dict = {
+    "boundary_fraction": 0.0,
+    "boundary_count": 0,
+    "total_sentences": 0,
+}
 
 
 def _compute_grad_and_fisher(
@@ -78,7 +104,16 @@ def _compute_grad_and_fisher(
     Sigma_0_inv: torch.Tensor,
     eps: float = 1e-6,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Gradient of L̃ and binomial Fisher-type precision at ``theta``.
+    """Epsilon-stabilised gradient and binomial Fisher-type precision at ``theta``.
+
+    Note: the gradient returned is epsilon-stabilised (denominator-only
+    clipping), not the true gradient of the clipped objective L̃. See
+    §7.2.2 of ``research_document_v8.md``. At the boundary the true
+    clipped gradient would be zero for the affected sentence, but this
+    implementation keeps every sentence contributing by stabilising the
+    ``μ_j (1 - μ_j)`` denominator. The clipped objective L̃ itself is
+    computed by :func:`_compute_clipped_objective` and is used only by
+    the line-search.
 
     Parameters
     ----------
@@ -96,14 +131,15 @@ def _compute_grad_and_fisher(
     Sigma_0_inv : Tensor of shape ``(k, k)``.
         Prior precision.
     eps : float
-        Clipping bound for ``μ_j`` to avoid log singularities.
+        Denominator-stabilisation bound for ``μ_j (1 - μ_j)``.
 
     Returns
     -------
     grad : Tensor of shape ``(k,)``.
-        ``∇_θ L̃(θ)``.
+        Epsilon-stabilised ``∇_θ L̃(θ)`` (see note above).
     H_fisher : Tensor of shape ``(k, k)``.
-        Binomial Fisher-type precision.
+        Binomial Fisher-type precision, denominator stabilised in the
+        same way.
     """
     if len(all_K) != len(all_m) or len(all_K) != len(all_z_tokens):
         raise ValueError(
@@ -114,6 +150,9 @@ def _compute_grad_and_fisher(
     diff = theta - mu_0
     grad = -(Sigma_0_inv @ diff)
     H = Sigma_0_inv
+
+    boundary_count = 0
+    total_count = 0
 
     for j in range(len(all_K)):
         m_j_int = int(all_m[j].item()) if torch.is_tensor(all_m[j]) else int(all_m[j])
@@ -135,6 +174,11 @@ def _compute_grad_and_fisher(
         mu_raw = pi_j.mean()                                  # ()
         mu_clamped = torch.clamp(mu_raw, eps, 1.0 - eps)      # ()
 
+        total_count += 1
+        mu_raw_val = float(mu_raw.detach().item())
+        if mu_raw_val < eps or mu_raw_val > 1.0 - eps:
+            boundary_count += 1
+
         weights = pi_j * (1.0 - pi_j)                         # (L_j,)
         g_j = (weights.unsqueeze(1) * z_j).mean(dim=0)        # (k,)
 
@@ -143,6 +187,12 @@ def _compute_grad_and_fisher(
 
         grad = grad + R_j * g_j
         H = H + (m_j / denom) * torch.outer(g_j, g_j)
+
+    _last_diagnostics["boundary_count"] = boundary_count
+    _last_diagnostics["total_sentences"] = total_count
+    _last_diagnostics["boundary_fraction"] = (
+        boundary_count / total_count if total_count > 0 else 0.0
+    )
 
     return grad, H
 
