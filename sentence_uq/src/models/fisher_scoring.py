@@ -58,6 +58,8 @@ from typing import List, Tuple
 
 import torch
 
+from src.utils.validation import validate_binomial_counts
+
 
 __all__ = [
     "_compute_clipped_objective",
@@ -210,6 +212,8 @@ def _fisher_scoring_core(
         raise ValueError(
             f"Sigma_0_inv must be ({k}, {k}); got {tuple(Sigma_0_inv.shape)}"
         )
+
+    validate_binomial_counts(all_K, all_m, context="fisher_scoring_map")
 
     theta = mu_0.clone()
     lam = float(lambda_init)

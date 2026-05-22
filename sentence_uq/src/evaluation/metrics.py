@@ -23,16 +23,21 @@ import pandas as pd
 import torch
 from sklearn.metrics import average_precision_score, roc_auc_score
 
+from src.utils.validation import validate_binomial_counts
+
 
 __all__ = [
     "compute_ratio_level_metrics",
     "compute_strict_factuality_metrics",
+    "compute_strict_metrics",
     "compute_calibration_metrics",
     "compute_prr",
     "compute_bootstrapped_ci",
     "plot_reliability_diagram",
     "compare_mc_vs_linear_epistemic",
     "full_evaluation",
+    "binomial_nll_full",
+    "binomial_ce",
 ]
 
 
@@ -242,6 +247,129 @@ def compute_strict_factuality_metrics(
         "Brier": calib["Brier"],
         "ECE": calib["ECE"],
     }
+
+
+def compute_strict_metrics(
+    K: Any,
+    m: Any,
+    mu_hat: Any,
+) -> Dict[str, float]:
+    """Strict factuality + error detection AUROC, both directions explicit.
+
+    Phase 7-3 fix 6: the legacy ``compute_strict_factuality_metrics`` reports
+    a single ``AUROC`` whose meaning depends on label / score direction. This
+    helper returns **both** directions so the paper can pick the correct
+    headline metric without ambiguity.
+
+    Definitions
+    -----------
+    * ``A_strict[j] = 1{K_j == m_j}`` — sentence is fully factual.
+    * ``p_strict[j] = μ̂_j ** m_j`` — model probability of "all atoms supported".
+    * ``E_error[j]  = 1 - A_strict[j]`` — at least one atom unsupported.
+    * ``p_error[j]  = 1 - p_strict[j]``.
+
+    By the standard AUROC identity ``AUROC(1 - y, 1 - s) == AUROC(y, s)``,
+    the two AUROCs are equal — exposing both names makes it impossible to
+    accidentally swap the label direction when writing tables.
+
+    Parameters
+    ----------
+    K : array-like of shape ``(N,)``
+        Supported-atom counts.
+    m : array-like of shape ``(N,)``
+        Total atomic-fact counts. Must satisfy ``K_j ≤ m_j`` (validated).
+    mu_hat : array-like of shape ``(N,)``
+        Predicted per-sentence factuality.
+
+    Returns
+    -------
+    dict with keys
+        ``strict_factuality_auroc`` : float
+        ``error_detection_auroc``   : float
+    """
+    K_arr = _to_numpy_1d(K, "K")
+    m_arr = _to_numpy_1d(m, "m")
+    mu_arr = _to_numpy_1d(mu_hat, "mu_hat")
+    if not (K_arr.shape == m_arr.shape == mu_arr.shape):
+        raise ValueError(
+            f"shape mismatch: K {K_arr.shape}, m {m_arr.shape}, "
+            f"mu_hat {mu_arr.shape}"
+        )
+    validate_binomial_counts(K_arr, m_arr, context="strict_metrics")
+
+    A_strict = (K_arr == m_arr).astype(np.float64)
+    p_strict = np.power(np.clip(mu_arr, 0.0, 1.0), m_arr)
+
+    E_error = 1.0 - A_strict
+    p_error = 1.0 - p_strict
+
+    out: Dict[str, float] = {}
+    if len(np.unique(A_strict)) > 1:
+        out["strict_factuality_auroc"] = float(roc_auc_score(A_strict, p_strict))
+        out["error_detection_auroc"] = float(roc_auc_score(E_error, p_error))
+    else:
+        out["strict_factuality_auroc"] = float("nan")
+        out["error_detection_auroc"] = float("nan")
+    return out
+
+
+def binomial_nll_full(
+    K: Any,
+    m: Any,
+    mu_hat: Any,
+    eps: float = 1e-8,
+) -> float:
+    """Full binomial NLL including the combinatorial constant.
+
+    ``NLL = -[ log C(m, K) + K log μ̂ + (m - K) log(1 - μ̂) ]``,
+    averaged over sentences. The combinatorial term uses ``gammaln`` so it
+    handles non-integer inputs gracefully.
+
+    Parameters
+    ----------
+    K, m, mu_hat : array-like of shape ``(N,)``
+    eps : float
+        Clipping bound applied to ``mu_hat`` for log-stability.
+    """
+    from scipy.special import gammaln
+
+    K_arr = _to_numpy_1d(K, "K")
+    m_arr = _to_numpy_1d(m, "m")
+    mu_arr = _to_numpy_1d(mu_hat, "mu_hat")
+    if not (K_arr.shape == m_arr.shape == mu_arr.shape):
+        raise ValueError(
+            f"shape mismatch: K {K_arr.shape}, m {m_arr.shape}, "
+            f"mu_hat {mu_arr.shape}"
+        )
+    mu_safe = np.clip(mu_arr, eps, 1.0 - eps)
+    log_comb = gammaln(m_arr + 1.0) - gammaln(K_arr + 1.0) - gammaln(m_arr - K_arr + 1.0)
+    nll = -(log_comb + K_arr * np.log(mu_safe) + (m_arr - K_arr) * np.log(1.0 - mu_safe))
+    return float(nll.mean())
+
+
+def binomial_ce(
+    K: Any,
+    m: Any,
+    mu_hat: Any,
+    eps: float = 1e-8,
+) -> float:
+    """Binomial cross-entropy (no combinatorial constant).
+
+    ``CE = -[ K log μ̂ + (m - K) log(1 - μ̂) ]``, averaged over sentences.
+    Matches the existing ``binomial_NLL`` field returned by
+    :func:`compute_ratio_level_metrics`.
+    """
+    K_arr = _to_numpy_1d(K, "K")
+    m_arr = _to_numpy_1d(m, "m")
+    mu_arr = _to_numpy_1d(mu_hat, "mu_hat")
+    if not (K_arr.shape == m_arr.shape == mu_arr.shape):
+        raise ValueError(
+            f"shape mismatch: K {K_arr.shape}, m {m_arr.shape}, "
+            f"mu_hat {mu_arr.shape}"
+        )
+    mu_safe = np.clip(mu_arr, eps, 1.0 - eps)
+    ce = -(K_arr * np.log(mu_safe) + (m_arr - K_arr) * np.log(1.0 - mu_safe))
+    return float(ce.mean())
 
 
 # ---------------------------------------------------------------------------
@@ -612,6 +740,8 @@ def full_evaluation(
             f"{mu.shape}, {p_str.shape}, {K.shape}, {m.shape}, {u.shape}"
         )
 
+    validate_binomial_counts(K, m, context="full_evaluation")
+
     keep = m > 0
     n_total = int(m.size)
     n_kept = int(keep.sum())
@@ -626,7 +756,8 @@ def full_evaluation(
     u = u[keep]
 
     U = K / m
-    A = (K >= m).astype(np.float64)
+    # Strict factuality: label=1 means all atoms supported (K_j == m_j).
+    A = (K == m).astype(np.float64)
 
     rows: List[Tuple[str, str, float]] = []
 
@@ -635,6 +766,11 @@ def full_evaluation(
     for name in ("MAE", "RMSE", "Pearson_r", "binomial_NLL"):
         if name in ratio:
             rows.append((name, "ratio", float(ratio[name])))
+    # binomial_NLL above is the cross-entropy (no combinatorial constant).
+    # Phase 7-3 fix 7 surfaces both names explicitly + the full binomial NLL
+    # (with the log C(m, K) term) so the paper can pick the right headline.
+    rows.append(("binomial_ce", "ratio", float(binomial_ce(K, m, mu))))
+    rows.append(("binomial_nll_full", "ratio", float(binomial_nll_full(K, m, mu))))
     ratio_calib = compute_calibration_metrics(U, mu, n_bins=10)
     rows.append(("Brier", "ratio", float(ratio_calib["Brier"])))
     rows.append(("ECE", "ratio", float(ratio_calib["ECE"])))
@@ -647,6 +783,19 @@ def full_evaluation(
         rows.append((name, "strict", float(strict[name])))
     strict_prr = compute_prr(A, u, num_thresholds=100)
     rows.append(("PRR_AUC", "strict", float(strict_prr["prr_auc"])))
+
+    # --- error detection: label=1 means at least one atom unsupported ---
+    strict_explicit = compute_strict_metrics(K, m, mu)
+    rows.append((
+        "strict_factuality_auroc",
+        "strict",
+        float(strict_explicit["strict_factuality_auroc"]),
+    ))
+    rows.append((
+        "error_detection_auroc",
+        "strict",
+        float(strict_explicit["error_detection_auroc"]),
+    ))
 
     # --- bookkeeping rows ---
     rows.append(("n_sentences", "info", float(n_kept)))

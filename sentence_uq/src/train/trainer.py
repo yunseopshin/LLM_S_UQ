@@ -56,6 +56,7 @@ from torch import Tensor
 
 from src.features.extractor import extract_sentence_token_features
 from src.models.bayesian_main import BayesianSentenceUQ, verify_local_pd
+from src.utils.validation import validate_binomial_counts
 
 
 __all__ = ["SentenceUQTrainer"]
@@ -502,6 +503,7 @@ class SentenceUQTrainer:
 
         K_t = torch.tensor(K_list, dtype=torch.long, device=self.device)
         m_t = torch.tensor(m_list, dtype=torch.long, device=self.device)
+        validate_binomial_counts(K_t, m_t, context="SentenceUQTrainer._collate")
         return all_z, K_t, m_t
 
     @staticmethod
