@@ -1,0 +1,42 @@
+{
+  "setup": 2,
+  "n_test_sentences": 353,
+  "partial_threshold": 0.2,
+  "check_1_partial_spearman": {
+    "raw_spearman": -0.6084417844843014,
+    "partial_spearman": -0.07207058566411453,
+    "pass": false
+  },
+  "check_2_stratified_prr": {
+    "low": {
+      "prr_auc": 0.12279447420350309,
+      "no_skill": 0.07203389830508475,
+      "n": 118,
+      "pass": true
+    },
+    "mid": {
+      "prr_auc": 0.1657545700604717,
+      "no_skill": 0.14774011299435028,
+      "n": 118,
+      "pass": true
+    },
+    "high": {
+      "prr_auc": 0.45231389629389573,
+      "no_skill": 0.377065527065527,
+      "n": 117,
+      "pass": true
+    },
+    "overall": {
+      "prr_auc": 0.3171589374059605,
+      "no_skill": 0.19844192634560906,
+      "n": 353,
+      "pass": true
+    }
+  },
+  "check_3_vif": {
+    "vif": 1.482313365274723,
+    "pass": true
+  },
+  "overall_prr_auc_epi_logit": 0.3171589374059605,
+  "gate_pass": false
+}

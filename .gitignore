@@ -31,3 +31,13 @@ wandb/
 runs/
 outputs/
 checkpoints/
+
+# Torch tensors / model & hidden-state artifacts (too large for git)
+*.pt
+*.pth
+*.safetensors
+
+# Generated experiment data (hidden states, caches, annotations)
+sentence_uq/data/generations/
+sentence_uq/data/cache/
+sentence_uq/data/processed/

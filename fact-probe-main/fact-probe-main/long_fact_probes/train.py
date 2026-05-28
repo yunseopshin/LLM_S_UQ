@@ -37,6 +37,11 @@ MODEL_CONFIGS = {
         'hf_name': 'meta-llama/Meta-Llama-3.1-8B-Instruct',
         'num_layers': 32
     },
+    'llama3-8b': {
+        'name': 'Llama3-8B',
+        'hf_name': 'meta-llama/Meta-Llama-3-8B-Instruct',
+        'num_layers': 32
+    },
     'llama3.2-3b': {
         'name': 'Llama3.2-3B',
         'hf_name': 'meta-llama/Llama-3.2-3B-Instruct',

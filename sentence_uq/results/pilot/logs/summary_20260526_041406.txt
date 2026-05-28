@@ -1,0 +1,23 @@
+==================================================================
+Bayesian sentence-level UQ pipeline (label=pilot)
+Config        : configs/pilot.yaml
+Results dir   : results/pilot
+Log dir       : results/pilot/logs
+Stamp dir     : results/pilot/stamps
+Timestamp     : 20260526_041406
+Force re-run  : 0
+Project root  : /home/ys971217/LLM_S_UQ/sentence_uq
+==================================================================
+[SKIP] phase0: Prepare dataset (raw + split)  (stamp present: results/pilot/stamps/phase0.done)
+[OK]   phase1: Generate hidden states + token mapping  (210s)
+[OK]   phase1b: Cache per-token entropy / top-1  (5s)
+[OK]   phase2: Annotate factuality (K_j, m_j)  (1420s)
+[OK]   phase3: Train main Bayesian model  (106s)
+[SKIP] phase4: aux head  (trained model: results/pilot/trained_model.pt OK; U^*: not found under data/processed/)
+[OK]   phase5: Baselines (incl. Han et al. factuality probe)  (4s)
+[OK]   phase6: Evaluate (ratio-level + strict + comparisons)  (13s)
+------------------------------------------------------------------
+Pipeline finished in 1758s
+Results : results/pilot
+Summary : results/pilot/logs/summary_20260526_041406.txt
+------------------------------------------------------------------

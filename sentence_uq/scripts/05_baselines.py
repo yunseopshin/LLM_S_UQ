@@ -697,6 +697,47 @@ def _attach_sentence_texts(
         rec["text"] = by_dataset.get(ds, {}).get(key, "")
 
 
+def _attach_sentence_claims(
+    records: Sequence[Dict[str, Any]],
+    processed_dirs: Dict[str, str | Path],
+) -> None:
+    """Mutate ``records`` in place, adding the per-claim list from Phase 1-4.
+
+    ``SentenceUQTrainer.prepare_data`` carries only ``K_j`` / ``m_j`` (all
+    the Bayesian model needs), but the *original* Han et al. probe
+    re-encodes every atomic claim, so it requires ``claims`` — each entry
+    exposing ``text`` and ``label`` (see
+    :meth:`FactualityProbeBaseline.build_original_dataset`). We re-walk the
+    annotation files and match on ``(source_id, token_range)`` exactly as
+    :func:`_attach_sentence_texts`. Missing matches leave ``claims`` empty
+    (the probe then drops the row).
+    """
+    by_dataset: Dict[str, Dict[Tuple[str, int, int], List[Dict[str, Any]]]] = {}
+    for dataset, processed_dir in processed_dirs.items():
+        annotations = SentenceUQTrainer._load_annotations(  # type: ignore[attr-defined]
+            dataset, Path(processed_dir)
+        )
+        idx: Dict[Tuple[str, int, int], List[Dict[str, Any]]] = {}
+        for source_id, record in annotations.items():
+            for sent in record.get("sentences", []) or []:
+                tr = sent.get("token_range")
+                if not tr or len(tr) != 2:
+                    continue
+                idx[(source_id, int(tr[0]), int(tr[1]))] = list(
+                    sent.get("claims", []) or []
+                )
+        by_dataset[dataset] = idx
+
+    for rec in records:
+        ds = str(rec.get("dataset"))
+        key = (
+            str(rec.get("source_id")),
+            int(rec["token_range"][0]),
+            int(rec["token_range"][1]),
+        )
+        rec["claims"] = by_dataset.get(ds, {}).get(key, [])
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -924,6 +965,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             }
         else:
             print(f"\n[factuality_probe_original] running… (model={model_name})")
+            # prepare_data drops the per-claim list; the original probe needs it.
+            _attach_sentence_claims(train_records, processed_dirs)
+            _attach_sentence_claims(test_records, processed_dirs)
             out = _run_factuality_probe_original(
                 train_records,
                 test_records,

@@ -1,0 +1,18 @@
+{
+  "setup": 2,
+  "n_test_pool": 387,
+  "n_test_positive": 353,
+  "frac_strict_factual": 0.0764872521246459,
+  "selected_layers": [
+    0,
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    28,
+    32
+  ],
+  "alpha_argmax_layer": 32
+}

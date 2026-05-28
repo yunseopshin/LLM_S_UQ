@@ -1,0 +1,5 @@
+model,train_file,classifier,C,group_size,layer_group,val_auroc,probe_file
+Llama3-8B,train.pkl,logistic_regression,0.1,1,"(31, 31)",0.8208498243829215,Llama3-8B_train_logistic_regression_C0.1_group1.pkl
+Llama3-8B,train.pkl,logistic_regression,0.5,1,"(14, 14)",0.8425956359600008,Llama3-8B_train_logistic_regression_C0.5_group1.pkl
+Llama3-8B,train.pkl,logistic_regression,0.1,5,"(25, 29)",0.8177500437319412,Llama3-8B_train_logistic_regression_C0.1_group5.pkl
+Llama3-8B,train.pkl,logistic_regression,0.5,5,"(10, 14)",0.8465861945196231,Llama3-8B_train_logistic_regression_C0.5_group5.pkl

@@ -11,8 +11,8 @@ dataset:
   setup: 2
   factscore_bio_dir: data/raw/factscore_bio
   longfact_dir: data/raw/longfact
-  splits_dir: data/splits
-  split_file: null
+  splits_dir: data/splits_smoke               # smoke split lives here (01_generate reads splits_dir/setup_{N}.json)
+  split_file: data/splits_smoke/setup_2.json  # small balanced smoke split (train 8 / val 2 / test 5)
   seed: 42
   pilot_size: 5                     # number of entities/prompts for pilot runs
 

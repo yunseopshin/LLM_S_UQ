@@ -38,13 +38,13 @@ processed:
 projection_dim: 64
 
 # === Training (Phase 4-1) ===
-num_epochs: 50
+num_epochs: 300            # full-data run: long enough for loss plateau + ample PD-check history
 lr: 1.0e-3
 num_fisher_iters: 10
 prior_sigma_init: 1.0
 batch_size: null
-eval_every: 1
-pd_check_every: 5
+eval_every: 1              # val metrics every epoch -> dense convergence curve
+pd_check_every: 5          # verify_local_pd every 5 epochs -> 60 PD checks over 300 epochs
 
 # === Output ===
 results_dir: results/setup_2

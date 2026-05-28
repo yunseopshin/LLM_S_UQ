@@ -1,0 +1,23 @@
+==================================================================
+Bayesian sentence-level UQ pipeline (label=full)
+Config        : configs/default.yaml
+Results dir   : results/setup_2
+Log dir       : results/setup_2/logs
+Stamp dir     : results/setup_2/stamps
+Timestamp     : 20260526_062409
+Force re-run  : 0
+Project root  : /home/ys971217/LLM_S_UQ/sentence_uq
+==================================================================
+[OK]   phase0: Prepare dataset (raw + split)  (0s)
+[OK]   phase1: Generate hidden states + token mapping  (3475s)
+[OK]   phase1b: Cache per-token entropy / top-1  (66s)
+[OK]   phase2: Annotate factuality (K_j, m_j)  (103951s)
+[OK]   phase3: Train main Bayesian model  (14924s)
+[SKIP] phase4: aux head  (trained model: results/setup_2/trained_model.pt OK; U^*: not found under data/processed/)
+[OK]   phase5: Baselines (incl. Han et al. factuality probe)  (27s)
+[OK]   phase6: Evaluate (ratio-level + strict + comparisons)  (21s)
+------------------------------------------------------------------
+Pipeline finished in 122464s
+Results : results/setup_2
+Summary : results/setup_2/logs/summary_20260526_062409.txt
+------------------------------------------------------------------

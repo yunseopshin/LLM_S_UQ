@@ -1,0 +1,100 @@
+{
+  "setup": 2,
+  "seed": 42,
+  "train": [
+    {
+      "dataset": "factscore_bio",
+      "entity": "Jidenna",
+      "prompt": "Tell me a bio of Jidenna.",
+      "prompt_idx": 0
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Quintus Sosius Senecio",
+      "prompt": "Tell me a bio of Quintus Sosius Senecio.",
+      "prompt_idx": 1
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Beenie Man",
+      "prompt": "Tell me a bio of Beenie Man.",
+      "prompt_idx": 2
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Baltasar Corrada del Río",
+      "prompt": "Tell me a bio of Baltasar Corrada del Río.",
+      "prompt_idx": 3
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Frederick Howard Taylor",
+      "prompt": "Tell me a bio of Frederick Howard Taylor.",
+      "prompt_idx": 4
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Maneka Gandhi",
+      "prompt": "Tell me a bio of Maneka Gandhi.",
+      "prompt_idx": 5
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Malcolm Hedding",
+      "prompt": "Tell me a bio of Malcolm Hedding.",
+      "prompt_idx": 6
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Robert Smith, Baron Smith of Kelvin",
+      "prompt": "Tell me a bio of Robert Smith, Baron Smith of Kelvin.",
+      "prompt_idx": 7
+    }
+  ],
+  "val": [
+    {
+      "dataset": "factscore_bio",
+      "entity": "Anushka Sharma",
+      "prompt": "Tell me a bio of Anushka Sharma.",
+      "prompt_idx": 0
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Desmond Luke",
+      "prompt": "Tell me a bio of Desmond Luke.",
+      "prompt_idx": 1
+    }
+  ],
+  "test": [
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kang Ji-hwan",
+      "prompt": "Tell me a bio of Kang Ji-hwan.",
+      "prompt_idx": 0
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Kalki Koechlin",
+      "prompt": "Tell me a bio of Kalki Koechlin.",
+      "prompt_idx": 1
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "William Post",
+      "prompt": "Tell me a bio of William Post.",
+      "prompt_idx": 2
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "William Waldegrave, Baron Waldegrave of North Hill",
+      "prompt": "Tell me a bio of William Waldegrave, Baron Waldegrave of North Hill.",
+      "prompt_idx": 3
+    },
+    {
+      "dataset": "factscore_bio",
+      "entity": "Darrius Heyward-Bey",
+      "prompt": "Tell me a bio of Darrius Heyward-Bey.",
+      "prompt_idx": 4
+    }
+  ]
+}

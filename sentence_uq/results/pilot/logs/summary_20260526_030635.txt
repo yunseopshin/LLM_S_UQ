@@ -1,0 +1,11 @@
+==================================================================
+Bayesian sentence-level UQ pipeline (label=pilot)
+Config        : configs/pilot.yaml
+Results dir   : results/pilot
+Log dir       : results/pilot/logs
+Stamp dir     : results/pilot/stamps
+Timestamp     : 20260526_030635
+Force re-run  : 0
+Project root  : /home/ys971217/LLM_S_UQ/sentence_uq
+==================================================================
+[OK]   phase0: Prepare dataset (raw + split)  (0s)

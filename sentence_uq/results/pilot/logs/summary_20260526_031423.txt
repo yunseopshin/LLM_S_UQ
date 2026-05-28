@@ -1,0 +1,12 @@
+==================================================================
+Bayesian sentence-level UQ pipeline (label=pilot)
+Config        : configs/pilot.yaml
+Results dir   : results/pilot
+Log dir       : results/pilot/logs
+Stamp dir     : results/pilot/stamps
+Timestamp     : 20260526_031423
+Force re-run  : 0
+Project root  : /home/ys971217/LLM_S_UQ/sentence_uq
+==================================================================
+[SKIP] phase0: Prepare dataset (raw + split)  (stamp present: results/pilot/stamps/phase0.done)
+[FAIL] phase1: Generate hidden states + token mapping  (exit 1, 57s)
