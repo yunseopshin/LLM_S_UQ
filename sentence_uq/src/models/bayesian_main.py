@@ -81,6 +81,7 @@ class BayesianSentenceUQ(nn.Module):
         feature_params: SentenceUQParams,
         num_fisher_iters: int = 10,
         eps: float = 1e-6,
+        logit_reg_lambda: float = 0.0,
     ) -> None:
         super().__init__()
         if not isinstance(feature_params, SentenceUQParams):
@@ -94,10 +95,17 @@ class BayesianSentenceUQ(nn.Module):
             )
         if eps <= 0.0 or eps >= 0.5:
             raise ValueError(f"eps must lie in (0, 0.5); got {eps}")
+        if logit_reg_lambda < 0.0:
+            raise ValueError(
+                f"logit_reg_lambda must be non-negative, got {logit_reg_lambda}"
+            )
 
         self.feature_params = feature_params
         self.num_fisher_iters = int(num_fisher_iters)
         self.eps = float(eps)
+        # Phase 9.4: strength of the per-token logit-magnitude penalty that
+        # combats sigmoid saturation (0.0 == disabled, baseline behaviour).
+        self.logit_reg_lambda = float(logit_reg_lambda)
 
     # ------------------------------------------------------------------
     # MAP estimation
@@ -172,8 +180,13 @@ class BayesianSentenceUQ(nn.Module):
 
         Math::
 
-            L = Σ_{j: m_j > 0} [ -K_j log μ̃_j - (m_j - K_j) log(1 - μ̃_j) ],
+            L = Σ_{j: m_j > 0} [ -K_j log μ̃_j - (m_j - K_j) log(1 - μ̃_j) ]
+                + λ · Σ_{j: m_j > 0} (1/L_j) Σ_ℓ (θ̂ᵀ z_ℓ)²,
             μ̃_j = clip( (1/L_j) Σ_ℓ σ(θ̂ᵀ z_ℓ), ε, 1 - ε )
+
+        The optional λ term (``logit_reg_lambda``, Phase 9.4) penalises
+        per-token logit magnitude to reduce sigmoid saturation; λ=0 recovers
+        the plain binomial NLL.
 
         Because ``θ̂`` is produced by the differentiable
         :meth:`compute_map`, gradients propagate to
@@ -205,6 +218,7 @@ class BayesianSentenceUQ(nn.Module):
         dtype = theta_hat.dtype
         device = theta_hat.device
         total_loss = torch.zeros((), dtype=dtype, device=device)
+        logit_reg = torch.zeros((), dtype=dtype, device=device)
 
         for j in range(len(all_K)):
             m_j_int = (
@@ -223,7 +237,8 @@ class BayesianSentenceUQ(nn.Module):
             K_j = all_K[j].to(dtype)
             m_j = all_m[j].to(dtype)
 
-            pi_j = torch.sigmoid(z_j @ theta_hat)
+            logits_j = z_j @ theta_hat
+            pi_j = torch.sigmoid(logits_j)
             mu_clamped = torch.clamp(pi_j.mean(), self.eps, 1.0 - self.eps)
 
             total_loss = total_loss + (
@@ -231,7 +246,14 @@ class BayesianSentenceUQ(nn.Module):
                 - (m_j - K_j) * torch.log(1.0 - mu_clamped)
             )
 
-        return total_loss
+            if self.logit_reg_lambda > 0.0:
+                # Phase 9.4: penalise per-token logit magnitude (mean over the
+                # sentence's tokens), summed over m_j>0 sentences to match the
+                # sum-reduced NLL. Differentiable through theta_hat (rule 9):
+                # smaller logits -> less sigmoid saturation -> larger ĝ and Σ̂.
+                logit_reg = logit_reg + (logits_j * logits_j).mean()
+
+        return total_loss + self.logit_reg_lambda * logit_reg
 
     # ------------------------------------------------------------------
     # Predictive inference — Phase 3-3 stub

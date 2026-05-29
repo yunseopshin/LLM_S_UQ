@@ -86,6 +86,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--eval-every", type=int, default=None)
     p.add_argument("--pd-check-every", type=int, default=None)
     p.add_argument(
+        "--logit-reg-lambda", type=float, default=None,
+        help="Phase 9.4 logit-magnitude penalty strength (0.0 = baseline NLL).",
+    )
+    p.add_argument(
         "--results-dir", type=str, default=None,
         help="Override the output directory (default: results/setup_{N}).",
     )
@@ -224,6 +228,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.pd_check_every is not None
         else int(_top_get(cfg, "pd_check_every", 5))
     )
+    logit_reg_lambda = (
+        args.logit_reg_lambda
+        if args.logit_reg_lambda is not None
+        else float(_top_get(cfg, "logit_reg_lambda", 0.0))
+    )
 
     results_dir = Path(
         args.results_dir
@@ -265,6 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     bayes = BayesianSentenceUQ(
         feature_params=feature_params,
         num_fisher_iters=num_fisher_iters,
+        logit_reg_lambda=logit_reg_lambda,
     )
 
     device = _resolve_device(args.device)
@@ -278,7 +288,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         f"Training:    epochs={num_epochs}, lr={lr}, fisher_iters={num_fisher_iters}, "
-        f"eval_every={eval_every}, pd_check_every={pd_check_every}, device={device}"
+        f"eval_every={eval_every}, pd_check_every={pd_check_every}, "
+        f"logit_reg_lambda={logit_reg_lambda}, device={device}"
     )
 
     data = trainer.prepare_data(
@@ -329,6 +340,7 @@ def main(argv: list[str] | None = None) -> int:
                 "prior_sigma_init": prior_sigma_init,
                 "eval_every": eval_every,
                 "pd_check_every": pd_check_every,
+                "logit_reg_lambda": logit_reg_lambda,
             },
             "split_file": str(split_file),
         },
