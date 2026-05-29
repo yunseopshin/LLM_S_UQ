@@ -16,6 +16,7 @@ doc; the **open decisions** are consolidated at the bottom.
 | `phase_9_3_ood_findings.md` | 9.3 OOD | `epi_μ` **rises OOD** (×2.77 mean, p<1e-3) → genuine epistemic; in-domain≈0 is correct. §7: temperature sweep (post-hoc fails, retraining lever validated). |
 | `phase_9_4_saturation_remedy_options.md` | 9.4 design | Three retraining options compared; **Option A (logit L2 penalty)** recommended. |
 | `phase_9_5_logit_reg_results.md` | 9.5 retrain | λ sweep; **λ=1e-2 sweet spot** (epi_μ ×3, ECE improved); ĝ↔Σ̂ coupling caps recovery; OOD still rises. |
+| `phase_9_6_promotion.md` | 9.6 promote | **λ=1e-2 promoted to production `setup_2/`** (copy of validated `lam1em2`; only `04_evaluate` re-run, `baselines.json` reused; λ=0 backed up). Ratio ECE 0.067→0.055. |
 
 **Data artifacts**: `epistemic_diagnostics.json`, `logit_epistemic_validation.json`,
 `ood_epistemic.{json,png}`, `temperature_sweep.{json,png}`, `logitreg_compare.json`,
@@ -42,8 +43,12 @@ doc; the **open decisions** are consolidated at the bottom.
 
 ## 3. OPEN decisions / next steps (nothing actioned beyond this)
 
-1. **Promote λ=1e-2 model to production `results/setup_2/`?** — *deferred.* Would
-   require re-running all downstream eval / baselines / paper figures. (`phase_9_5` §4)
+1. ~~**Promote λ=1e-2 model to production `results/setup_2/`?**~~ — **DONE (Phase 9.6).**
+   Promoted by copying the validated `lam1em2` model; only `04_evaluate` re-run (CPU),
+   `baselines.json` reused (verified model-independent). λ=0 baseline backed up at
+   `setup_2_logitreg/lam0_baseline/`. Production ratio ECE now 0.055 (was 0.067),
+   Pearson 0.453, binom-NLL 1.327, epi_μ ×2.1; MC↔linear epi Pearson 0.966. See
+   `phase_9_6_promotion.md`. (Downstream "baselines re-run" turned out unnecessary.)
 2. **Epistemic magnitude is still modest** (std ~0.04; few % of total uncertainty).
    The ĝ↔Σ̂ coupling caps de-saturation gains; larger gains need a different
    parameterisation, not just more λ. — open research question. (`phase_9_5` §2,§4;
@@ -87,5 +92,6 @@ doc; the **open decisions** are consolidated at the bottom.
 
 ## 4. Status
 
-All experiments through 9.5 are **done and recorded**. Items in §3 are **open and not
-yet actioned** — awaiting direction.
+Experiments through 9.5 **done and recorded**; **9.6 promoted λ=1e-2 to production
+`setup_2/`** (§3 item 1 closed). Remaining §3 items (2–7) are **open** — item 5 (paper
+section) now has a stable production model to write against; items 3/4/6/7 unchanged.
