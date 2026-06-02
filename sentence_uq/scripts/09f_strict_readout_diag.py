@@ -67,10 +67,20 @@ def _cfg_get(cfg: Dict[str, Any], section: str, key: str, default: Any = None) -
     return ((cfg.get(section) or {}).get(key)) if cfg else default
 
 
-def _auroc_auprc(A: np.ndarray, score: np.ndarray) -> tuple[float, float]:
-    """AUROC + AUPRC of ``score`` against binary label ``A`` (rank-only)."""
+def _strict_metrics(A: np.ndarray, score: np.ndarray) -> Dict[str, float]:
+    """AUROC/AUPRC (rank-only) + ECE/Brier (calibration) of ``score`` vs ``A``.
+
+    ``score`` is treated as a predicted P(A=1): AUROC/AUPRC depend only on its
+    ranking, while ECE/Brier judge whether its *magnitude* is a calibrated
+    probability of strict factuality.
+    """
     m = compute_strict_factuality_metrics(A, score, np.zeros_like(score))
-    return float(m["AUROC"]), float(m["AUPRC"])
+    return {
+        "AUROC": float(m["AUROC"]),
+        "AUPRC": float(m["AUPRC"]),
+        "ECE": float(m["ECE"]),
+        "Brier": float(m["Brier"]),
+    }
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -168,13 +178,14 @@ def main(argv: List[str] | None = None) -> int:
         "mu_tilde ** m (Bayes p_strict, CURRENT)": np.power(mu_tilde, m_arr),
     }
 
-    print("\n=== Strict-factuality detection by readout (same model) ===")
-    print(f"{'readout':<46}{'AUROC':>9}{'AUPRC':>9}")
+    print("\n=== Strict metrics if ONE quantity is used for AUROC *and* ECE ===")
+    print(f"  (rank metrics AUROC/AUPRC vs calibration metrics ECE/Brier)")
+    print(f"{'readout (used for ALL 4 metrics)':<46}{'AUROC':>8}{'AUPRC':>8}{'ECE':>8}{'Brier':>8}")
     out_json: Dict[str, Dict[str, float]] = {}
     for name, sc in scores.items():
-        auroc, auprc = _auroc_auprc(A, sc)
-        print(f"{name:<46}{auroc:>9.4f}{auprc:>9.4f}")
-        out_json[name.split("(")[0].strip()] = {"AUROC": auroc, "AUPRC": auprc}
+        mm = _strict_metrics(A, sc)
+        print(f"{name:<46}{mm['AUROC']:>8.3f}{mm['AUPRC']:>8.3f}{mm['ECE']:>8.3f}{mm['Brier']:>8.3f}")
+        out_json[name.split("(")[0].strip()] = mm
 
     # --- reference baselines from the existing eval table ------------------
     print("\n=== Reference (from final_metrics_strict.csv) ===")
@@ -184,7 +195,8 @@ def main(argv: List[str] | None = None) -> int:
         with open(ref_csv, newline="") as f:
             for row in csv.DictReader(f):
                 if "factuality_probe" in row["method"] or row["method"].startswith("Ours"):
-                    print(f"{row['method']:<46}{float(row['AUROC']):>9.4f}{float(row['AUPRC']):>9.4f}")
+                    print(f"{row['method']:<46}{float(row['AUROC']):>8.3f}"
+                          f"{float(row['AUPRC']):>8.3f}{float(row['ECE']):>8.3f}{float(row['Brier']):>8.3f}")
 
     out_path = results_dir / "document" / "strict_readout_diag.json"
     with open(out_path, "w", encoding="utf-8") as f:

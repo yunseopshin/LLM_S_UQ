@@ -17,6 +17,8 @@ doc; the **open decisions** are consolidated at the bottom.
 | `phase_9_4_saturation_remedy_options.md` | 9.4 design | Three retraining options compared; **Option A (logit L2 penalty)** recommended. |
 | `phase_9_5_logit_reg_results.md` | 9.5 retrain | λ sweep; **λ=1e-2 sweet spot** (epi_μ ×3, ECE improved); ĝ↔Σ̂ coupling caps recovery; OOD still rises. |
 | `phase_9_6_promotion.md` | 9.6 promote | **λ=1e-2 promoted to production `setup_2/`** (copy of validated `lam1em2`; only `04_evaluate` re-run, `baselines.json` reused; λ=0 backed up). Ratio ECE 0.067→0.055. |
+| `phase_9_7_strict_readout.md` | 9.7 readout | Strict gap is partly a **readout** issue: ranking by μ̂ (vs μ̂^m) lifts strict AUROC 0.78→0.83. But within-method **consistency** forces a trade-off (μ̂: AUROC↑/ECE 0.17✗; μ̂^m: ECE 0.05✓/AUROC↓). Same ranking↔calibration trade-off seen inside Han's own adapted vs original variants. |
+| `phase_9_8_projdim.md` | 9.8 projdim | projection_dim 64→128→256 (full setup_2, λ=1e-2, parallel GPUs): **discrimination flat** (Pearson 0.45, strict AUROC(μ̂) 0.83, AUPRC 0.25); re-encode gap **unchanged** → bottleneck is the generation-time feature's info ceiling, not compression. |
 
 **Data artifacts**: `epistemic_diagnostics.json`, `logit_epistemic_validation.json`,
 `ood_epistemic.{json,png}`, `temperature_sweep.{json,png}`, `logitreg_compare.json`,
@@ -38,6 +40,15 @@ doc; the **open decisions** are consolidated at the bottom.
 - **Root cause = sigmoid saturation**, fixed by a **logit L2 penalty** in training.
 - **Operating point: λ = 1e-2.** epi_μ ×2–3, ECE improved (0.067→0.055), MAE/Pearson/
   AUROC preserved, logits normalised (median 21→2.5), OOD rise preserved (×1.39, p≈5e-5).
+- **Strict-factuality competitiveness vs Han (9.7–9.8): headline = calibration + cost +
+  UQ, NOT raw discrimination.** The strict AUROC/AUPRC gap to Han's *re-encode* probe is
+  feature-bound (projection_dim 64→256 does not close it; 9.8) and only re-encoding
+  separates methods (generation-time variants — ours μ̂ 0.83, Han adapted 0.81 — cluster).
+  Switching the strict *detection* score to μ̂ would lift AUROC but breaks within-method
+  consistency and wrecks ECE (9.7), so we keep μ̂^m for all strict metrics. Defensible
+  claim: single forward pass (zero extra cost) ≈ re-encode probe on RMSE/Brier & within-CI
+  on strict AUROC, **better-calibrated (ECE)**, +UQ, ~10⁴× cheaper. Strict is *secondary*;
+  primary ratio-level ECE is the strong, high-power win.
 
 ---
 
