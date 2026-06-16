@@ -109,11 +109,13 @@ def _load_yaml(path: str) -> Dict[str, Any]:
     -------
     dict
         Empty dict when the YAML file is empty / contains nothing.
-    """
-    import yaml
 
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    Resolves an optional ``inherits:`` parent chain (see ``src.utils.io``) so
+    the thin ``setup_{1,2,3}.yaml`` overrides pick up ``default.yaml``'s blocks.
+    """
+    from src.utils.io import load_config
+
+    return load_config(path)
 
 
 def _cfg_get(

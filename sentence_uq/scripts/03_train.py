@@ -42,10 +42,14 @@ from src.train.trainer import SentenceUQTrainer  # noqa: E402
 
 
 def _load_yaml(path: str) -> dict[str, Any]:
-    import yaml
+    # Inheritance-aware loader: resolves an optional `inherits:` parent chain so
+    # the thin setup_{1,2,3}.yaml files pick up default.yaml's training block
+    # (num_epochs, lr, ...) and logit_reg_lambda. Without this, --config
+    # configs/setup_N.yaml would silently fall back to argparse defaults
+    # (num_epochs=50, logit_reg_lambda=0.0) and NOT reproduce production.
+    from src.utils.io import load_config
 
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    return load_config(path)
 
 
 def _cfg_get(cfg: dict[str, Any], section: str, key: str, default: Any = None) -> Any:

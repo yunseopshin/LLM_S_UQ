@@ -29,10 +29,11 @@ from src.data.dataset import (  # noqa: E402
 
 
 def _load_yaml_config(path: str) -> dict[str, Any]:
-    import yaml  # local import so the script still runs without pyyaml installed
+    # Inheritance-aware loader: resolves an optional `inherits:` parent chain so
+    # the thin setup_{1,2,3}.yaml files pick up default.yaml's blocks.
+    from src.utils.io import load_config
 
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    return load_config(path)
 
 
 def _build_parser() -> argparse.ArgumentParser:

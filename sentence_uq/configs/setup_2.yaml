@@ -1,6 +1,8 @@
 # Setup 2 — In-domain Biography (default).
 # Train on 120 FActScore-Bio entities, validate on 33, test on the Han 30.
-# Inherits everything else from configs/default.yaml.
+# Inherits everything else (model, generation, training, logit_reg_lambda, ...)
+# from configs/default.yaml via the load_config `inherits` mechanism.
+inherits: default.yaml
 
 dataset:
   setup: 2

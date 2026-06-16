@@ -1,7 +1,9 @@
 # Setup 1 — Cross-domain (Han et al. reproduction).
 # Train on LongFact-Objects, validate on held-out LongFact topics,
 # test on the fixed Han 30-entity FActScore-Bio set.
-# Inherits everything else from configs/default.yaml.
+# Inherits everything else (model, generation, training, logit_reg_lambda, ...)
+# from configs/default.yaml via the load_config `inherits` mechanism.
+inherits: default.yaml
 
 dataset:
   setup: 1

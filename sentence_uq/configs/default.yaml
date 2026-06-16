@@ -45,6 +45,7 @@ prior_sigma_init: 1.0
 batch_size: null
 eval_every: 1              # val metrics every epoch -> dense convergence curve
 pd_check_every: 5          # verify_local_pd every 5 epochs -> 60 PD checks over 300 epochs
+logit_reg_lambda: 1.0e-2   # Phase 9.5/9.6 promoted operating point (0.0 = baseline NLL)
 
 # === Output ===
 results_dir: results/setup_2

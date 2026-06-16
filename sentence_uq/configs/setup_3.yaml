@@ -1,6 +1,8 @@
 # Setup 3 — Multi-domain (LongFact topic-level).
 # Train on 26 LongFact-Objects topics, validate on 4, test on 8.
-# Inherits everything else from configs/default.yaml.
+# Inherits everything else (model, generation, training, logit_reg_lambda, ...)
+# from configs/default.yaml via the load_config `inherits` mechanism.
+inherits: default.yaml
 
 dataset:
   setup: 3

@@ -92,10 +92,11 @@ def _safe_filename(s: str, max_len: int = 200) -> str:
 
 
 def _load_yaml(path: str) -> Dict[str, Any]:
-    import yaml
+    # Inheritance-aware loader: resolves an optional `inherits:` parent chain so
+    # the thin setup_{1,2,3}.yaml files pick up default.yaml's blocks.
+    from src.utils.io import load_config
 
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    return load_config(path)
 
 
 def _cfg_get(

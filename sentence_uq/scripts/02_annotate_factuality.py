@@ -74,10 +74,11 @@ _SETUP_DATASETS: dict[int, tuple[str, ...]] = {
 
 
 def _load_yaml(path: str) -> dict[str, Any]:
-    import yaml
+    # Inheritance-aware loader: resolves an optional `inherits:` parent chain so
+    # the thin setup_{1,2,3}.yaml files pick up default.yaml's blocks.
+    from src.utils.io import load_config
 
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    return load_config(path)
 
 
 def _cfg_get(cfg: dict[str, Any], section: str, key: str, default: Any = None) -> Any:
