@@ -53,3 +53,6 @@ semantic-entropy-probes-main/
 sentence_uq_old/
 # Stray pip log junk file
 =2.1
+
+# Experiment results/outputs (figures, json dumps -- large, kept locally)
+sentence_uq/results/
