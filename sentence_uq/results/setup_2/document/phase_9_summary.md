@@ -64,6 +64,12 @@ doc; the **open decisions** are consolidated at the bottom.
    The ĝ↔Σ̂ coupling caps de-saturation gains; larger gains need a different
    parameterisation, not just more λ. — open research question. (`phase_9_5` §2,§4;
    `phase_9_3` §4)
+   - **Content-mask pooling ruled out (Phase 11-0).** Read-only counterfactual on
+     the λ=1e-2 model: saturation is **uniform across POS** (content gate ≈
+     function gate, ratio 1.0×; PROPN is among the *most* saturated), so pooling
+     lifts Epi_mu only ~1.3× (median) — **NO-GO**, no retraining done. See
+     `phase_11_0_pooling_diagnostic.md`. Larger magnitude still needs a loss/prior
+     change (binomial focal, fixed prior scale per §3 item 6) or feature/layer work.
 3. **`epi_logit` re-validation on the λ=1e-2 model** — it now *rises* OOD (it dropped
    on baseline); if it is ever to be used, re-run the 9.2-1 partial-correlation gate
    on this model. (`phase_9_5` §3)
