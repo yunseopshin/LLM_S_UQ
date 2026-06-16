@@ -1,8 +1,0 @@
-data/generations/*
-data/cache/*
-data/processed/*
-results/
-*.pt
-__pycache__/
-*.egg-info/
-.env

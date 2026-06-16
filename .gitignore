@@ -43,3 +43,13 @@ sentence_uq/data/cache/
 sentence_uq/data/processed/
 # Large benchmark result dumps (too big for git)
 fact-probe-main/fact-probe-main/factuality_benchmarks/long-form-factuality/results/2024-09-19-18-57-18-SAFE.json
+
+# Third-party baseline / reference repos (kept locally, not for our repo)
+fact-probe-main/
+FActScore-main/
+long-form-factuality-main/
+semantic-entropy-probes-main/
+# Old version of our code
+sentence_uq_old/
+# Stray pip log junk file
+=2.1
