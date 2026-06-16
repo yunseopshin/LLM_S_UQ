@@ -41,3 +41,5 @@ checkpoints/
 sentence_uq/data/generations/
 sentence_uq/data/cache/
 sentence_uq/data/processed/
+# Large benchmark result dumps (too big for git)
+fact-probe-main/fact-probe-main/factuality_benchmarks/long-form-factuality/results/2024-09-19-18-57-18-SAFE.json
