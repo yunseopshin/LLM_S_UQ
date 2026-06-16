@@ -60,10 +60,11 @@ Design notes
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import torch
 
+from src.models.likelihood import BinomialLikelihood, Likelihood
 from src.utils.validation import validate_binomial_counts
 
 
@@ -92,6 +93,8 @@ _last_diagnostics: dict = {
     "boundary_fraction": 0.0,
     "boundary_count": 0,
     "total_sentences": 0,
+    "phi": None,
+    "rho": 0.0,
 }
 
 
@@ -103,6 +106,7 @@ def _compute_grad_and_fisher(
     mu_0: torch.Tensor,
     Sigma_0_inv: torch.Tensor,
     eps: float = 1e-6,
+    likelihood: Optional[Likelihood] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Epsilon-stabilised gradient and binomial Fisher-type precision at ``theta``.
 
@@ -132,20 +136,29 @@ def _compute_grad_and_fisher(
         Prior precision.
     eps : float
         Denominator-stabilisation bound for ``μ_j (1 - μ_j)``.
+    likelihood : Likelihood, optional
+        Per-sentence observation model supplying the residual ``R_j`` and
+        the precision weight ``w_j``. ``None`` (default) constructs a
+        :class:`~src.models.likelihood.BinomialLikelihood`, so every
+        pre-existing call site is byte-for-byte unchanged.
 
     Returns
     -------
     grad : Tensor of shape ``(k,)``.
         Epsilon-stabilised ``∇_θ L̃(θ)`` (see note above).
     H_fisher : Tensor of shape ``(k, k)``.
-        Binomial Fisher-type precision, denominator stabilised in the
-        same way.
+        Fisher-type precision (Binomial: expected information; Beta-
+        Binomial: observed information), denominator stabilised the same
+        way.
     """
     if len(all_K) != len(all_m) or len(all_K) != len(all_z_tokens):
         raise ValueError(
             "all_z_tokens, all_K, all_m must have the same length; "
             f"got {len(all_z_tokens)}, {len(all_K)}, {len(all_m)}"
         )
+
+    if likelihood is None:
+        likelihood = BinomialLikelihood(eps=eps)
 
     diff = theta - mu_0
     grad = -(Sigma_0_inv @ diff)
@@ -182,16 +195,22 @@ def _compute_grad_and_fisher(
         weights = pi_j * (1.0 - pi_j)                         # (L_j,)
         g_j = (weights.unsqueeze(1) * z_j).mean(dim=0)        # (k,)
 
-        denom = mu_clamped * (1.0 - mu_clamped)
-        R_j = (K_j - m_j * mu_clamped) / denom
+        R_j = likelihood.score_mu(K_j, m_j, mu_clamped)       # residual
+        w_j = likelihood.fisher_weight(K_j, m_j, mu_clamped)  # precision weight
 
         grad = grad + R_j * g_j
-        H = H + (m_j / denom) * torch.outer(g_j, g_j)
+        H = H + w_j * torch.outer(g_j, g_j)
 
     _last_diagnostics["boundary_count"] = boundary_count
     _last_diagnostics["total_sentences"] = total_count
     _last_diagnostics["boundary_fraction"] = (
         boundary_count / total_count if total_count > 0 else 0.0
+    )
+    # Phase 10-1: surface the live phi / rho when a Beta-Binomial is in use.
+    _last_diagnostics["rho"] = float(likelihood.rho)
+    phi_attr = getattr(likelihood, "phi", None)
+    _last_diagnostics["phi"] = (
+        float(phi_attr.detach().item()) if torch.is_tensor(phi_attr) else None
     )
 
     return grad, H
@@ -205,15 +224,22 @@ def _compute_clipped_objective(
     mu_0: torch.Tensor,
     Sigma_0_inv: torch.Tensor,
     eps: float = 1e-6,
+    likelihood: Optional[Likelihood] = None,
 ) -> torch.Tensor:
-    """Scalar clipped binomial log-posterior ``L̃(θ)``.
+    """Scalar clipped log-posterior ``L̃(θ)`` for the line search.
 
-    Sentences with ``m_j = 0`` are skipped (contribute zero).
+    ``L̃(θ) = -0.5 (θ-μ_0)ᵀ Σ_0⁻¹ (θ-μ_0) - Σ_j neg_log_pmf_j``. Sentences
+    with ``m_j = 0`` are skipped (contribute zero). With a Binomial
+    likelihood this is bit-identical to the historical clipped binomial
+    log-posterior (the combinatorial constant was, and remains, dropped).
 
     Parameters
     ----------
     theta, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps
         See :func:`_compute_grad_and_fisher`.
+    likelihood : Likelihood, optional
+        Observation model. ``None`` (default) constructs a
+        :class:`~src.models.likelihood.BinomialLikelihood`.
 
     Returns
     -------
@@ -224,6 +250,9 @@ def _compute_clipped_objective(
             "all_z_tokens, all_K, all_m must have the same length; "
             f"got {len(all_z_tokens)}, {len(all_K)}, {len(all_m)}"
         )
+
+    if likelihood is None:
+        likelihood = BinomialLikelihood(eps=eps)
 
     diff = theta - mu_0
     obj = -0.5 * (diff @ (Sigma_0_inv @ diff))
@@ -240,7 +269,17 @@ def _compute_clipped_objective(
         pi_j = torch.sigmoid(z_j @ theta)
         mu_clamped = torch.clamp(pi_j.mean(), eps, 1.0 - eps)
 
-        obj = obj + K_j * torch.log(mu_clamped) + (m_j - K_j) * torch.log(1.0 - mu_clamped)
+        if isinstance(likelihood, BinomialLikelihood):
+            # Bit-identity guard (HARD CONSTRAINT 1): accumulate the two log
+            # terms exactly as the pre-10-1 code did, i.e. ``(obj + A) + B``.
+            # The generic ``obj - neg_log_pmf`` computes ``obj + (A + B)``, a
+            # valid IEEE reassociation that differs at 1 ULP and can flip a
+            # near-tie line-search accept/reject -> a different float32 MAP.
+            obj = obj + K_j * torch.log(mu_clamped) + (m_j - K_j) * torch.log(
+                1.0 - mu_clamped
+            )
+        else:
+            obj = obj - likelihood.neg_log_pmf(K_j, m_j, mu_clamped)
 
     return obj
 
@@ -255,6 +294,7 @@ def _fisher_scoring_core(
     eps: float,
     lambda_init: float,
     verbose: bool,
+    likelihood: Optional[Likelihood] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Shared loop body for the autograd-tracked and detached variants."""
     k = mu_0.shape[0]
@@ -265,17 +305,20 @@ def _fisher_scoring_core(
 
     validate_binomial_counts(all_K, all_m, context="fisher_scoring_map")
 
+    if likelihood is None:
+        likelihood = BinomialLikelihood(eps=eps)
+
     theta = mu_0.clone()
     lam = float(lambda_init)
     eye = torch.eye(k, device=mu_0.device, dtype=mu_0.dtype)
 
     prev_obj = _compute_clipped_objective(
-        theta, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps
+        theta, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps, likelihood
     )
 
     for it in range(num_iters):
         grad, H = _compute_grad_and_fisher(
-            theta, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps
+            theta, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps, likelihood
         )
 
         try:
@@ -288,7 +331,7 @@ def _fisher_scoring_core(
 
         theta_new = theta + delta
         new_obj = _compute_clipped_objective(
-            theta_new, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps
+            theta_new, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps, likelihood
         )
 
         if new_obj.item() > prev_obj.item():
@@ -305,7 +348,7 @@ def _fisher_scoring_core(
                 break
 
     _, H_final = _compute_grad_and_fisher(
-        theta, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps
+        theta, all_z_tokens, all_K, all_m, mu_0, Sigma_0_inv, eps, likelihood
     )
     return theta, H_final
 
@@ -320,8 +363,9 @@ def fisher_scoring_map(
     eps: float = 1e-6,
     lambda_init: float = 1e-4,
     verbose: bool = False,
+    likelihood: Optional[Likelihood] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Damped Fisher-scoring MAP for the binomial latent model.
+    """Damped Fisher-scoring MAP for the latent factuality model.
 
     Unrolled, autograd-tracked variant — used inside the outer bilevel
     loop so that ``∂θ̂ / ∂ψ`` is available via backprop through the
@@ -354,6 +398,9 @@ def fisher_scoring_map(
         Initial damping.
     verbose : bool
         Print per-iteration status.
+    likelihood : Likelihood, optional
+        Observation model (Phase 10-1). ``None`` (default) uses a
+        Binomial likelihood, reproducing the pre-10-1 behaviour exactly.
 
     Returns
     -------
@@ -371,6 +418,7 @@ def fisher_scoring_map(
         eps=eps,
         lambda_init=lambda_init,
         verbose=verbose,
+        likelihood=likelihood,
     )
 
 
@@ -384,6 +432,7 @@ def fisher_scoring_map_detached(
     eps: float = 1e-6,
     lambda_init: float = 1e-4,
     verbose: bool = False,
+    likelihood: Optional[Likelihood] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Inference-only Fisher-scoring MAP — same algorithm under ``no_grad``.
 
@@ -401,5 +450,6 @@ def fisher_scoring_map_detached(
             eps=eps,
             lambda_init=lambda_init,
             verbose=verbose,
+            likelihood=likelihood,
         )
     return theta, H

@@ -112,6 +112,13 @@ class SentenceUQTrainer:
         Where to send progress lines. Defaults to ``print``.
     weight_decay : float, optional
         Adam weight decay. Defaults to 0.
+    phi_lr : float, optional
+        Phase 10-1: separate Adam learning rate for the Beta-Binomial
+        ``log_phi``. When ``None`` (default), ``log_phi`` (if present and
+        trainable) shares the main ``lr`` group. A larger ``phi_lr`` lets
+        the global concentration move at a meaningful rate while the rest
+        of ``psi`` keeps the binomial-peer ``lr`` (a fair comparison).
+        Ignored for the Binomial model (no ``log_phi``).
     """
 
     def __init__(
@@ -124,6 +131,7 @@ class SentenceUQTrainer:
         device: str | torch.device = "cpu",
         log_fn: Optional[Callable[[str], None]] = None,
         weight_decay: float = 0.0,
+        phi_lr: Optional[float] = None,
     ) -> None:
         if not isinstance(model, BayesianSentenceUQ):
             raise TypeError(
@@ -148,12 +156,33 @@ class SentenceUQTrainer:
         self.eval_every = int(eval_every)
         self.pd_check_every = int(pd_check_every)
         self.log_fn = log_fn if log_fn is not None else print
+        self.phi_lr = float(phi_lr) if phi_lr is not None else None
 
-        self.optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=float(lr),
-            weight_decay=float(weight_decay),
-        )
+        log_phi = getattr(model.feature_params, "log_phi", None)
+        if (
+            self.phi_lr is not None
+            and log_phi is not None
+            and log_phi.requires_grad
+        ):
+            # Separate Adam group: log_phi at phi_lr, everything else at lr.
+            others = [
+                p
+                for p in model.parameters()
+                if p.requires_grad and p is not log_phi
+            ]
+            self.optimizer = torch.optim.Adam(
+                [
+                    {"params": others, "lr": float(lr)},
+                    {"params": [log_phi], "lr": self.phi_lr},
+                ],
+                weight_decay=float(weight_decay),
+            )
+        else:
+            self.optimizer = torch.optim.Adam(
+                model.parameters(),
+                lr=float(lr),
+                weight_decay=float(weight_decay),
+            )
 
     # ------------------------------------------------------------------
     # Data preparation
@@ -418,6 +447,18 @@ class SentenceUQTrainer:
                 f"(N+={train_stats['num_positive']}) "
                 f"bf={bf:.1%}"
             )
+
+            # Phase 10-1: surface the learned concentration each epoch for
+            # the Beta-Binomial peer. log_phi is part of model.parameters()
+            # (a submodule parameter), so Adam already updates it.
+            if getattr(self.model.feature_params, "likelihood", "binomial") == (
+                "beta_binomial"
+            ):
+                phi_t = self.model.feature_params.phi
+                if phi_t is not None:
+                    phi_hat = float(phi_t.detach().item())
+                    rho_hat = 1.0 / (phi_hat + 1.0)
+                    log_line += f"  phi={phi_hat:.3g} rho={rho_hat:.4f}"
 
             do_eval = (
                 val_data is not None

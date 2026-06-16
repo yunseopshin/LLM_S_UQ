@@ -1,0 +1,18 @@
+# Setup 2 (In-domain Biography) -- Beta-Binomial peer of configs/setup_2.yaml.
+# Phase 10-1: identical data and training to the Binomial setup_2.yaml; the ONLY
+# change is the observation likelihood, so any difference in results is
+# attributable solely to the Beta-Binomial vs Binomial choice.
+inherits: setup_2.yaml
+
+model:
+  likelihood: beta_binomial   # binomial | beta_binomial
+  phi_init: 50.0              # initial concentration (near-Binomial start)
+  learn_phi: true             # outer loop learns log_phi
+
+# log_phi gets a larger, separate Adam lr so the global concentration can reach
+# its data-supported level within the 300-epoch budget; the rest of psi keeps the
+# binomial-peer lr (1e-3 from default.yaml) so the comparison stays fair.
+optim:
+  phi_lr: 0.05
+
+results_dir: results/setup_2_betabinomial

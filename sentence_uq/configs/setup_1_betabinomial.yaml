@@ -1,0 +1,13 @@
+# Setup 1 (Cross-domain) -- Beta-Binomial peer of configs/setup_1.yaml.
+# Phase 10-1: only the observation likelihood differs from the Binomial peer.
+inherits: setup_1.yaml
+
+model:
+  likelihood: beta_binomial
+  phi_init: 50.0
+  learn_phi: true
+
+optim:
+  phi_lr: 0.05
+
+results_dir: results/setup_1_betabinomial

@@ -25,7 +25,8 @@ Design notes
 
 from __future__ import annotations
 
-from typing import Tuple
+import math
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -56,6 +57,17 @@ class SentenceUQParams(nn.Module):
     projection_dim : int, optional
         Output dimension ``p`` of the linear projection ``W``. Defaults
         to 64, matching Part VI §6.1.
+    likelihood : str, optional
+        Observation model: ``"binomial"`` (default) or
+        ``"beta_binomial"`` (Phase 10-1). The Binomial setting keeps the
+        parameter set and ``state_dict`` identical to the pre-10-1 model
+        (no ``log_phi`` registered).
+    phi_init : float, optional
+        Beta-Binomial only: initial global concentration ``phi`` (near
+        Binomial when large). Defaults to ``50.0``. Ignored for Binomial.
+    learn_phi : bool, optional
+        Beta-Binomial only: whether ``log_phi`` is trained by the outer
+        loop (``True``, default) or held fixed at ``phi_init``.
 
     Attributes
     ----------
@@ -67,13 +79,21 @@ class SentenceUQParams(nn.Module):
         Prior mean ``μ_0 ∈ R^k`` with ``k = p + 2``.
     log_sigma_0 : nn.Parameter
         Log of the diagonal prior std ``log σ_0 ∈ R^k``.
+    log_phi : nn.Parameter
+        Beta-Binomial only: ``log phi`` (global scalar). Not registered
+        when ``likelihood == "binomial"``.
     """
+
+    _VALID_LIKELIHOODS = ("binomial", "beta_binomial")
 
     def __init__(
         self,
         hidden_dim: int,
         num_layers: int,
         projection_dim: int = 64,
+        likelihood: str = "binomial",
+        phi_init: float = 50.0,
+        learn_phi: bool = True,
     ) -> None:
         super().__init__()
         if hidden_dim <= 0:
@@ -84,20 +104,50 @@ class SentenceUQParams(nn.Module):
             raise ValueError(
                 f"projection_dim must be positive, got {projection_dim}"
             )
+        if likelihood not in self._VALID_LIKELIHOODS:
+            raise ValueError(
+                f"likelihood must be one of {self._VALID_LIKELIHOODS}; "
+                f"got {likelihood!r}"
+            )
+        if phi_init <= 0.0:
+            raise ValueError(f"phi_init must be positive, got {phi_init}")
 
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.projection_dim = projection_dim
+        self.likelihood = likelihood
+        self.phi_init = float(phi_init)
+        self.learn_phi = bool(learn_phi)
 
         self.W = nn.Linear(hidden_dim, projection_dim, bias=False)
         self.alpha = nn.Parameter(torch.zeros(num_layers))
         self.mu_0 = nn.Parameter(torch.zeros(projection_dim + 2))
         self.log_sigma_0 = nn.Parameter(torch.zeros(projection_dim + 2))
 
+        # Phase 10-1: register log_phi ONLY for the Beta-Binomial peer so the
+        # Binomial parameter set / state_dict is byte-for-byte unchanged.
+        if likelihood == "beta_binomial":
+            self.log_phi = nn.Parameter(
+                torch.tensor(math.log(float(phi_init))),
+                requires_grad=bool(learn_phi),
+            )
+
     @property
     def feature_dim(self) -> int:
         """Dimension ``k = p + 2`` of the per-token feature vector ``z_ℓ``."""
         return self.projection_dim + 2
+
+    @property
+    def phi(self) -> Optional[torch.Tensor]:
+        """Global Beta-Binomial concentration ``phi = exp(log_phi)``.
+
+        Returns ``None`` for the Binomial likelihood (no ``log_phi``). The
+        returned tensor is gradient-carrying when ``learn_phi`` is set, so
+        the outer loop can backprop into ``log_phi``.
+        """
+        if self.likelihood != "beta_binomial":
+            return None
+        return torch.exp(self.log_phi)
 
     def get_Sigma_0(self) -> torch.Tensor:
         """Diagonal prior covariance ``Σ_0 = diag(exp(2 · log σ_0)) ∈ R^{k×k}``.

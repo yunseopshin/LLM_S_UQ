@@ -50,6 +50,7 @@ from src.models.fisher_scoring import (
     fisher_scoring_map,
     fisher_scoring_map_detached,
 )
+from src.models.likelihood import Likelihood, make_likelihood
 
 
 __all__ = ["BayesianSentenceUQ", "verify_local_pd"]
@@ -108,6 +109,27 @@ class BayesianSentenceUQ(nn.Module):
         self.logit_reg_lambda = float(logit_reg_lambda)
 
     # ------------------------------------------------------------------
+    # Observation likelihood (Phase 10-1)
+    # ------------------------------------------------------------------
+
+    def make_likelihood(self) -> Likelihood:
+        """Build the per-sentence likelihood from ``feature_params``.
+
+        Constructed fresh each forward pass so that, for the Beta-Binomial
+        peer, ``BetaBinomialLikelihood`` carries a *live*
+        ``phi = exp(log_phi)`` and gradients flow into ``log_phi`` both
+        directly (via the outer NLL) and indirectly (through the unrolled
+        ``theta_hat(psi)``). For the Binomial likelihood this returns a
+        stateless :class:`~src.models.likelihood.BinomialLikelihood`, so the
+        MAP / loss are byte-for-byte unchanged.
+        """
+        return make_likelihood(
+            self.feature_params.likelihood,
+            phi=self.feature_params.phi,
+            eps=self.eps,
+        )
+
+    # ------------------------------------------------------------------
     # MAP estimation
     # ------------------------------------------------------------------
 
@@ -117,6 +139,7 @@ class BayesianSentenceUQ(nn.Module):
         all_K: torch.Tensor,
         all_m: torch.Tensor,
         differentiable: bool = True,
+        likelihood: Optional[Likelihood] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Damped Fisher-scoring MAP ``θ̂`` and Fisher-type precision.
 
@@ -136,6 +159,9 @@ class BayesianSentenceUQ(nn.Module):
             ``True`` (default) → unrolled autograd-tracked Fisher pass
             (used by the outer training loop). ``False`` → ``no_grad``
             inference-only pass.
+        likelihood : Likelihood, optional
+            Observation model (Phase 10-1). ``None`` (default) builds one
+            from ``feature_params`` via :meth:`make_likelihood`.
 
         Returns
         -------
@@ -145,6 +171,8 @@ class BayesianSentenceUQ(nn.Module):
         """
         mu_0 = self.feature_params.mu_0
         Sigma_0_inv = self.feature_params.get_Sigma_0_inv()
+        if likelihood is None:
+            likelihood = self.make_likelihood()
 
         if differentiable:
             return fisher_scoring_map(
@@ -155,6 +183,7 @@ class BayesianSentenceUQ(nn.Module):
                 Sigma_0_inv=Sigma_0_inv,
                 num_iters=self.num_fisher_iters,
                 eps=self.eps,
+                likelihood=likelihood,
             )
         return fisher_scoring_map_detached(
             all_z_tokens=all_z_tokens,
@@ -164,6 +193,7 @@ class BayesianSentenceUQ(nn.Module):
             Sigma_0_inv=Sigma_0_inv,
             num_iters=self.num_fisher_iters,
             eps=self.eps,
+            likelihood=likelihood,
         )
 
     # ------------------------------------------------------------------
@@ -211,8 +241,13 @@ class BayesianSentenceUQ(nn.Module):
                 f"got {len(all_z_tokens)}, {len(all_K)}, {len(all_m)}"
             )
 
+        # One live likelihood shared by the inner MAP and the outer NLL so
+        # that, for the Beta-Binomial, log_phi receives gradient both
+        # indirectly (through theta_hat) and directly (through neg_log_pmf).
+        likelihood = self.make_likelihood()
+
         theta_hat, _ = self.compute_map(
-            all_z_tokens, all_K, all_m, differentiable=True
+            all_z_tokens, all_K, all_m, differentiable=True, likelihood=likelihood
         )
 
         dtype = theta_hat.dtype
@@ -241,10 +276,10 @@ class BayesianSentenceUQ(nn.Module):
             pi_j = torch.sigmoid(logits_j)
             mu_clamped = torch.clamp(pi_j.mean(), self.eps, 1.0 - self.eps)
 
-            total_loss = total_loss + (
-                -K_j * torch.log(mu_clamped)
-                - (m_j - K_j) * torch.log(1.0 - mu_clamped)
-            )
+            # Sum of per-sentence -log P_j. For the Binomial likelihood this
+            # is bit-identical to the historical
+            # ``-K log mu - (m-K) log(1-mu)`` term.
+            total_loss = total_loss + likelihood.neg_log_pmf(K_j, m_j, mu_clamped)
 
             if self.logit_reg_lambda > 0.0:
                 # Phase 9.4: penalise per-token logit magnitude (mean over the

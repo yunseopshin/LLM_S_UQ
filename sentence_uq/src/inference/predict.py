@@ -71,6 +71,7 @@ from src.features.extractor import (
     SentenceUQParams,
     extract_sentence_token_features,
 )
+from src.models.likelihood import Likelihood, make_likelihood
 
 
 __all__ = [
@@ -142,6 +143,14 @@ class Predictor:
         shrunk mean ``μ̃`` instead of ``μ̂``. The probit-shrunk
         sentence mean is always returned in ``p_factual_probit``.
         Default ``False``.
+    likelihood : Likelihood, optional
+        Observation model (Phase 10-1) supplying the within-sentence
+        correlation ``rho`` for the overdispersion factor
+        ``f = 1 + (m_* - 1) rho`` and the strict-factuality probability
+        ``P(A_* = 1) = exp(log_prob_all_correct(m_*, mu))``. ``None``
+        (default) uses a :class:`~src.models.likelihood.BinomialLikelihood`
+        (``rho = 0``), so the decomposition reduces *exactly* to the
+        pre-10-1 numbers.
     """
 
     def __init__(
@@ -150,6 +159,7 @@ class Predictor:
         Sigma_hat: torch.Tensor,
         feature_params: SentenceUQParams,
         use_probit_shrinkage: bool = False,
+        likelihood: Optional[Likelihood] = None,
     ) -> None:
         if not isinstance(feature_params, SentenceUQParams):
             raise TypeError(
@@ -176,6 +186,12 @@ class Predictor:
         self.feature_params = feature_params
         self.use_probit_shrinkage = bool(use_probit_shrinkage)
         self.k = k
+        # Phase 10-1: default to Binomial (rho = 0) so the decomposition is
+        # unchanged unless a Beta-Binomial likelihood is supplied.
+        self.likelihood = (
+            likelihood if likelihood is not None else make_likelihood("binomial")
+        )
+        self.rho = float(self.likelihood.rho)
 
     # ------------------------------------------------------------------
     # Single-sentence predictive
@@ -284,17 +300,32 @@ class Predictor:
                     # ratio / count / strict are undefined for m_j = 0
                     return out
 
+                # Phase 10-1: overdispersion factor f = 1 + (m_* - 1) rho.
+                # rho = 0 for the Binomial, so f = 1 and every term below
+                # reduces exactly to the pre-10-1 decomposition.
+                f = 1.0 + (float(m_j_int) - 1.0) * self.rho
+
                 # Use unclipped Bernoulli variance for the *parenthetical*,
                 # then clip at zero per the well-definedness caveat (§4.3).
                 inner = max(0.0, mu_var - epi_mu)
-                aleatoric_U = inner / float(m_j_int)
+                # Written as f * inner / m (not f / m * inner) so that the
+                # Binomial case (f = 1.0) reduces bit-exactly to inner / m.
+                aleatoric_U = f * inner / float(m_j_int)
                 total_U = aleatoric_U + epi_mu
                 epi_K = float(m_j_int) ** 2 * epi_mu
-                aleatoric_K = float(m_j_int) * inner
+                aleatoric_K = float(m_j_int) * f * inner
 
                 base_mu = mu_probit_f if self.use_probit_shrinkage else mu_hat_f
                 base_mu = min(max(base_mu, 0.0), 1.0)
-                p_strict = base_mu ** m_j_int
+                # Strict factuality via the likelihood: for the Binomial,
+                # exp(m * log(base_mu)) == base_mu ** m; for the Beta-Binomial
+                # it uses the all-correct lgamma form. Computed in float64 so
+                # the Binomial path matches the historical float64 base_mu ** m.
+                log_p_strict = self.likelihood.log_prob_all_correct(
+                    torch.tensor(float(m_j_int), dtype=torch.float64),
+                    torch.tensor(base_mu, dtype=torch.float64),
+                )
+                p_strict = min(max(float(torch.exp(log_p_strict).item()), 0.0), 1.0)
 
                 out["aleatoric_U"] = float(aleatoric_U)
                 out["total_U"] = float(total_U)
@@ -571,6 +602,12 @@ def save_trained_model(
             "hidden_dim": int(feature_params.hidden_dim),
             "num_layers": int(feature_params.num_layers),
             "projection_dim": int(feature_params.projection_dim),
+            # Phase 10-1: persist the likelihood config so beta_binomial
+            # models (which register log_phi) round-trip. Defaults keep
+            # binomial models byte-for-byte compatible with older payloads.
+            "likelihood": getattr(feature_params, "likelihood", "binomial"),
+            "phi_init": float(getattr(feature_params, "phi_init", 50.0)),
+            "learn_phi": bool(getattr(feature_params, "learn_phi", True)),
         },
         "extra": dict(extra) if extra is not None else {},
     }
@@ -596,6 +633,10 @@ def load_trained_model(
         ``theta_hat``      : Tensor of shape ``(k,)``
         ``Sigma_hat``      : Tensor of shape ``(k, k)``
         ``feature_params`` : :class:`SentenceUQParams` (with loaded state)
+        ``likelihood``     : :class:`~src.models.likelihood.Likelihood`
+            reconstructed from the saved config — a
+            :class:`BinomialLikelihood` for binomial models, or a
+            :class:`BetaBinomialLikelihood` carrying the fitted ``phi``.
         ``extra``          : dict — whatever was passed to ``save_trained_model``
     """
     src = Path(path)
@@ -604,15 +645,24 @@ def load_trained_model(
 
     payload = torch.load(src, map_location=map_location, weights_only=False)
     cfg = payload["feature_params_config"]
+    likelihood_name = str(cfg.get("likelihood", "binomial"))
     feature_params = SentenceUQParams(
         hidden_dim=int(cfg["hidden_dim"]),
         num_layers=int(cfg["num_layers"]),
         projection_dim=int(cfg["projection_dim"]),
+        likelihood=likelihood_name,
+        phi_init=float(cfg.get("phi_init", 50.0)),
+        learn_phi=bool(cfg.get("learn_phi", True)),
     )
     feature_params.load_state_dict(payload["feature_params_state_dict"])
+    likelihood = make_likelihood(
+        likelihood_name,
+        phi=feature_params.phi,  # None for binomial; fitted exp(log_phi) otherwise
+    )
     return {
         "theta_hat": payload["theta_hat"],
         "Sigma_hat": payload["Sigma_hat"],
         "feature_params": feature_params,
+        "likelihood": likelihood,
         "extra": payload.get("extra", {}),
     }

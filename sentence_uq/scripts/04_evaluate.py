@@ -957,6 +957,15 @@ def _evaluate_single_setup(
     Sigma_hat = loaded["Sigma_hat"]
     feature_params = loaded["feature_params"].to(device)
     feature_params.eval()
+    # Phase 10-1: reconstructed observation likelihood (Binomial -> rho = 0,
+    # so the decomposition is unchanged; Beta-Binomial carries the fitted phi).
+    likelihood = loaded.get("likelihood")
+    like_name = getattr(feature_params, "likelihood", "binomial")
+    if like_name == "beta_binomial" and likelihood is not None:
+        rho_hat = float(likelihood.rho)
+        print(f"Likelihood:    beta_binomial (rho_hat={rho_hat:.4f})")
+    else:
+        print("Likelihood:    binomial")
     extra = loaded.get("extra", {}) or {}
     selected_layers = (
         (extra.get("model_dims") or {}).get("selected_layers")
@@ -970,12 +979,14 @@ def _evaluate_single_setup(
         Sigma_hat=Sigma_hat,
         feature_params=feature_params,
         use_probit_shrinkage=True,
+        likelihood=likelihood,
     )
     point_predictor = Predictor(
         theta_hat=theta_hat,
         Sigma_hat=torch.zeros_like(Sigma_hat),
         feature_params=feature_params,
         use_probit_shrinkage=False,
+        likelihood=likelihood,
     )
 
     # --- Test data ----------------------------------------------------------

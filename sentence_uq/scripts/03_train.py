@@ -94,6 +94,20 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Phase 9.4 logit-magnitude penalty strength (0.0 = baseline NLL).",
     )
     p.add_argument(
+        "--likelihood", type=str, default=None,
+        choices=["binomial", "beta_binomial"],
+        help="Phase 10-1 observation model (default: config model.likelihood).",
+    )
+    p.add_argument(
+        "--phi-init", type=float, default=None,
+        help="beta_binomial only: initial concentration phi (default: config).",
+    )
+    p.add_argument(
+        "--phi-lr", type=float, default=None,
+        help="beta_binomial only: separate Adam lr for log_phi (default: config "
+             "optim.phi_lr, else the main lr).",
+    )
+    p.add_argument(
         "--results-dir", type=str, default=None,
         help="Override the output directory (default: results/setup_{N}).",
     )
@@ -237,6 +251,23 @@ def main(argv: list[str] | None = None) -> int:
         if args.logit_reg_lambda is not None
         else float(_top_get(cfg, "logit_reg_lambda", 0.0))
     )
+    likelihood = (
+        args.likelihood
+        if args.likelihood is not None
+        else str(_cfg_get(cfg, "model", "likelihood", "binomial"))
+    )
+    phi_init = (
+        args.phi_init
+        if args.phi_init is not None
+        else float(_cfg_get(cfg, "model", "phi_init", 50.0))
+    )
+    learn_phi = bool(_cfg_get(cfg, "model", "learn_phi", True))
+    phi_lr = (
+        args.phi_lr
+        if args.phi_lr is not None
+        else _cfg_get(cfg, "optim", "phi_lr", None)
+    )
+    phi_lr = float(phi_lr) if phi_lr is not None else None
 
     results_dir = Path(
         args.results_dir
@@ -268,6 +299,9 @@ def main(argv: list[str] | None = None) -> int:
         hidden_dim=hidden_dim,
         num_layers=num_layers,
         projection_dim=projection_dim,
+        likelihood=likelihood,
+        phi_init=phi_init,
+        learn_phi=learn_phi,
     )
     if prior_sigma_init != 1.0:
         with torch.no_grad():
@@ -289,11 +323,20 @@ def main(argv: list[str] | None = None) -> int:
         eval_every=eval_every,
         pd_check_every=pd_check_every,
         device=device,
+        phi_lr=phi_lr,
     )
     print(
         f"Training:    epochs={num_epochs}, lr={lr}, fisher_iters={num_fisher_iters}, "
         f"eval_every={eval_every}, pd_check_every={pd_check_every}, "
         f"logit_reg_lambda={logit_reg_lambda}, device={device}"
+    )
+    print(
+        f"Likelihood:  {likelihood}"
+        + (
+            f" (phi_init={phi_init}, learn_phi={learn_phi}, phi_lr={phi_lr})"
+            if likelihood == "beta_binomial"
+            else ""
+        )
     )
 
     data = trainer.prepare_data(
@@ -318,6 +361,20 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    # Phase 10-1 pre-flight: report the m_j distribution and a moment estimate
+    # of rho BEFORE training, so we know up front whether overdispersion is even
+    # present (and hence whether phi is identifiable).
+    if likelihood == "beta_binomial":
+        from src.utils.dispersion import (
+            dispersion_diagnostics,
+            format_dispersion_report,
+        )
+
+        train_K = [int(s.get("K_j", 0) or 0) for s in data["train"]]
+        train_m = [int(s.get("m_j", 0) or 0) for s in data["train"]]
+        disp = dispersion_diagnostics(train_K, train_m)
+        print(format_dispersion_report(disp))
 
     history = trainer.fit(
         train_data=data["train"],
@@ -345,7 +402,16 @@ def main(argv: list[str] | None = None) -> int:
                 "eval_every": eval_every,
                 "pd_check_every": pd_check_every,
                 "logit_reg_lambda": logit_reg_lambda,
+                "likelihood": likelihood,
+                "phi_init": phi_init,
+                "learn_phi": learn_phi,
             },
+            "likelihood": likelihood,
+            "phi_hat": (
+                float(feature_params.phi.detach().item())
+                if feature_params.likelihood == "beta_binomial"
+                else None
+            ),
             "split_file": str(split_file),
         },
     )
@@ -353,15 +419,25 @@ def main(argv: list[str] | None = None) -> int:
     with open(results_dir / "train_history.json", "w", encoding="utf-8") as f:
         json.dump(_serializable_history(history), f, indent=2)
 
+    phi_hat = (
+        float(feature_params.phi.detach().item())
+        if feature_params.likelihood == "beta_binomial"
+        else None
+    )
     summary = {
         "setup": setup,
         "n_train": n_train,
         "n_val": n_val,
         "n_test": n_test,
+        "likelihood": likelihood,
+        "phi_hat": phi_hat,
+        "rho_hat": (1.0 / (phi_hat + 1.0)) if phi_hat is not None else None,
         "final_train_loss": history["train_loss"][-1] if history["train_loss"] else None,
         "val_metrics_last": (history["val_metrics"][-1] if history["val_metrics"] else None),
         "test_metrics": history.get("test_metrics"),
     }
+    if phi_hat is not None:
+        print(f"Fitted phi_hat={phi_hat:.4g}  rho_hat={1.0 / (phi_hat + 1.0):.4f}")
     with open(results_dir / "train_summary.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 

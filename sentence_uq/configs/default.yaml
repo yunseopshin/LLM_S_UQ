@@ -5,6 +5,10 @@ model:
   name: meta-llama/Meta-Llama-3-8B-Instruct
   selected_layers: null   # null -> auto-select evenly spaced layers
   dtype: bfloat16
+  # === Observation likelihood (Phase 10-1) ===
+  likelihood: binomial      # binomial | beta_binomial
+  phi_init: 50.0            # beta_binomial only: initial concentration (near-Binomial)
+  learn_phi: true           # beta_binomial only: if false, phi fixed at phi_init
 
 # Dataset preparation and splitting (Phase 1-0)
 dataset:
