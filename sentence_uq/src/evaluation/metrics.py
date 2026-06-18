@@ -40,6 +40,10 @@ __all__ = [
     "binomial_ce",
     "fit_strict_gamma",
     "partial_correlation_gate",
+    "binomial_equal_tailed_interval",
+    "equal_tailed_interval_from_samples",
+    "sample_posterior_predictive_K",
+    "predictive_interval_coverage",
 ]
 
 
@@ -1076,3 +1080,234 @@ def full_evaluation(
     rows.append(("frac_strict_factual", "info", float(A.mean())))
 
     return pd.DataFrame(rows, columns=["metric", "tier", "value"])
+
+
+# ---------------------------------------------------------------------------
+# 9. Binomial predictive intervals (Phase 13 - interval coverage)
+# ---------------------------------------------------------------------------
+#
+# Phase 13 expresses "uncertainty of the per-sentence factuality probability" as
+# an equal-tailed predictive interval on the count ``K_j`` (mapped to the ratio
+# ``U_j = K_j / m_j``). Two variants:
+#
+#   (b) aleatoric-only      : K_j ~ Binomial(m_j, mu_hat)            -> exact PMF
+#   (c) aleatoric+epistemic : theta^(s) ~ N(theta_hat, Sigma_hat),
+#                             mu^(s) = mean_l sigmoid(theta^(s) . z_l),
+#                             K^(s)  ~ Binomial(m_j, mu^(s))         -> MC samples
+#
+# All helpers are additive and pure; they do not touch the posterior, the inner
+# loop, ``predict.py`` return values, or any baseline.
+
+
+def binomial_equal_tailed_interval(
+    m_j: int, p: float, level: float
+) -> Tuple[int, int]:
+    """Exact equal-tailed predictive interval for ``K ~ Binomial(m_j, p)``.
+
+    This is Phase-13 variant **(b)** (aleatoric-only, ``theta = theta_hat``).
+    With ``alpha = 1 - level`` the bounds are the equal-tailed quantiles of the
+    binomial PMF::
+
+        lo = F^{-1}(alpha / 2),    hi = F^{-1}(1 - alpha / 2),
+
+    where ``F^{-1}`` is :func:`scipy.stats.binom.ppf` (smallest integer ``k``
+    with CDF ``>= q``). Both bounds are inclusive and clamped to ``[0, m_j]``;
+    the interval on the ``U = K / m_j`` scale is ``[lo / m_j, hi / m_j]``, which
+    lies in ``[0, 1]`` by construction. The bounds are nested in ``level``
+    (``ppf`` is monotone in ``q``), so coverage and width are non-decreasing in
+    the nominal level.
+
+    Parameters
+    ----------
+    m_j : int
+        Atomic-fact count (must be ``> 0`` - ``m_j = 0`` is skipped upstream).
+    p : float
+        Per-sentence mean factuality ``mu_hat`` in ``[0, 1]`` (clamped).
+    level : float
+        Nominal coverage in ``(0, 1)`` (e.g. ``0.95``).
+
+    Returns
+    -------
+    (lo_K, hi_K) : tuple of int
+        Inclusive count bounds in ``[0, m_j]``.
+    """
+    from scipy.stats import binom
+
+    if not (0.0 < float(level) < 1.0):
+        raise ValueError(f"level must be in (0, 1), got {level}")
+    m = int(m_j)
+    if m <= 0:
+        raise ValueError(f"m_j must be positive, got {m_j}")
+    p_c = float(min(max(float(p), 0.0), 1.0))
+    alpha = 1.0 - float(level)
+    lo = int(binom.ppf(alpha / 2.0, m, p_c))
+    hi = int(binom.ppf(1.0 - alpha / 2.0, m, p_c))
+    lo = int(min(max(lo, 0), m))
+    hi = int(min(max(hi, 0), m))
+    if hi < lo:
+        hi = lo
+    return lo, hi
+
+
+def equal_tailed_interval_from_samples(
+    samples: Any, level: float
+) -> Tuple[float, float]:
+    """Equal-tailed interval of a discrete predictive sample set (variant (c)).
+
+    Returns the ``[alpha/2, 1 - alpha/2]`` quantiles of ``samples`` via
+    :func:`numpy.quantile` (linear interpolation), with ``alpha = 1 - level``.
+    Because ``numpy.quantile`` is monotone in the requested quantile, the bounds
+    are nested in ``level`` (lower bound non-increasing, upper non-decreasing),
+    so coverage and width are non-decreasing in the nominal level.
+
+    Parameters
+    ----------
+    samples : array-like of shape ``(S,)``
+        Predictive count samples ``{K^(s)}`` (see
+        :func:`sample_posterior_predictive_K`).
+    level : float
+        Nominal coverage in ``(0, 1)``.
+
+    Returns
+    -------
+    (lo, hi) : tuple of float
+        Equal-tailed quantile bounds on the count scale.
+    """
+    s = _to_numpy_1d(samples, "samples")
+    if s.size == 0:
+        raise ValueError("Cannot build an interval from empty samples")
+    if not (0.0 < float(level) < 1.0):
+        raise ValueError(f"level must be in (0, 1), got {level}")
+    alpha = 1.0 - float(level)
+    lo = float(np.quantile(s, alpha / 2.0))
+    hi = float(np.quantile(s, 1.0 - alpha / 2.0))
+    if hi < lo:
+        hi = lo
+    return lo, hi
+
+
+def sample_posterior_predictive_K(
+    theta_hat: torch.Tensor,
+    Sigma_hat: torch.Tensor,
+    z_tokens: torch.Tensor,
+    m_j: int,
+    num_samples: int = 500,
+    generator: Optional[torch.Generator] = None,
+) -> Dict[str, np.ndarray]:
+    """Posterior-predictive count samples for one sentence (variant (c)).
+
+    Implements the Phase-13 full posterior-predictive of ``K_j``::
+
+        theta^(s) ~ N(theta_hat, Sigma_hat)          (Cholesky with jitter)
+        mu^(s)    = (1 / L_j) sum_l sigmoid(theta^(s) . z_l)
+        K^(s)     ~ Binomial(m_j, mu^(s))            (m_j Bernoulli trials)
+
+    The theta sampling reuses :func:`src.inference.predict._stable_cholesky` (the
+    exact numerically-safe factor used inside
+    :meth:`Predictor.predict_mc_epistemic`) so this helper is consistent with the
+    existing MC epistemic path; ``predict.py`` itself is left unchanged (its
+    return values do not expose ``K`` samples, which is why this additive helper
+    exists). ``K^(s)`` is drawn as ``m_j`` Bernoulli trials per sample so a
+    single :class:`torch.Generator` makes both stages reproducible.
+
+    Parameters
+    ----------
+    theta_hat : Tensor of shape ``(k,)``
+        Laplace posterior mean.
+    Sigma_hat : Tensor of shape ``(k, k)``
+        Laplace posterior covariance.
+    z_tokens : Tensor of shape ``(L_j, k)``
+        Per-token features ``z_l`` for the sentence.
+    m_j : int
+        Atomic-fact count (must be ``> 0``).
+    num_samples : int
+        Number of posterior samples ``S`` (default 500).
+    generator : torch.Generator, optional
+        RNG for reproducibility (drives both theta and the Bernoulli draws).
+
+    Returns
+    -------
+    dict with keys:
+        ``K_samples``  : np.ndarray of shape ``(S,)`` float64 - ``{K^(s)}``
+        ``mu_samples`` : np.ndarray of shape ``(S,)`` float64 - ``{mu^(s)}``
+    """
+    from src.inference.predict import _stable_cholesky
+
+    if int(num_samples) <= 0:
+        raise ValueError(f"num_samples must be positive, got {num_samples}")
+    m = int(m_j)
+    if m <= 0:
+        raise ValueError(f"m_j must be positive, got {m_j}")
+    if z_tokens.dim() != 2:
+        raise ValueError(
+            f"z_tokens must be 2-D (L_j, k); got shape {tuple(z_tokens.shape)}"
+        )
+
+    with torch.no_grad():
+        z = z_tokens.detach().to(torch.float32)
+        theta = theta_hat.detach().to(torch.float32)
+        Sigma = Sigma_hat.detach().to(torch.float32)
+        k = theta.shape[0]
+        if z.shape[1] != k:
+            raise ValueError(
+                f"z_tokens last dim {z.shape[1]} != theta_hat dim {k}"
+            )
+        S = int(num_samples)
+        L_chol = _stable_cholesky(Sigma)                     # (k, k)
+        noise = torch.randn(
+            k, S, generator=generator, dtype=torch.float32, device=z.device
+        )
+        theta_s = theta.unsqueeze(1) + L_chol @ noise        # (k, S)
+        logits = z @ theta_s                                 # (L_j, S)
+        mu_s = torch.sigmoid(logits).mean(dim=0).clamp(0.0, 1.0)  # (S,)
+        # K^(s) ~ Binomial(m, mu^(s)) via m Bernoulli trials.
+        u = torch.rand(
+            S, m, generator=generator, dtype=torch.float32, device=z.device
+        )
+        K_s = (u < mu_s.unsqueeze(1)).sum(dim=1)             # (S,)
+
+    return {
+        "K_samples": K_s.to(torch.float64).cpu().numpy(),
+        "mu_samples": mu_s.to(torch.float64).cpu().numpy(),
+    }
+
+
+def predictive_interval_coverage(
+    lo: Any, hi: Any, K: Any, m: Any
+) -> Dict[str, float]:
+    """Empirical coverage and mean width of a set of count intervals.
+
+    Given per-sentence inclusive count bounds ``[lo_j, hi_j]``, observed counts
+    ``K_j`` and totals ``m_j``::
+
+        coverage   = mean( 1{ lo_j <= K_j <= hi_j } )
+        mean_width = mean( (hi_j - lo_j) / m_j )        (on the U = K/m scale)
+
+    Parameters
+    ----------
+    lo, hi : array-like of shape ``(N,)``
+        Per-sentence inclusive count bounds.
+    K : array-like of shape ``(N,)``
+        Observed supported-atom counts.
+    m : array-like of shape ``(N,)``
+        Atomic-fact counts (``> 0``).
+
+    Returns
+    -------
+    dict with keys ``{"coverage", "mean_width", "n"}``.
+    """
+    lo_a = _to_numpy_1d(lo, "lo")
+    hi_a = _to_numpy_1d(hi, "hi")
+    K_a = _to_numpy_1d(K, "K")
+    m_a = _to_numpy_1d(m, "m")
+    if not (lo_a.shape == hi_a.shape == K_a.shape == m_a.shape):
+        raise ValueError(
+            f"shape mismatch: lo {lo_a.shape}, hi {hi_a.shape}, "
+            f"K {K_a.shape}, m {m_a.shape}"
+        )
+    if K_a.size == 0:
+        raise ValueError("Cannot compute coverage on empty inputs")
+    inside = (K_a >= lo_a) & (K_a <= hi_a)
+    coverage = float(np.mean(inside.astype(np.float64)))
+    mean_width = float(np.mean((hi_a - lo_a) / np.maximum(m_a, 1.0)))
+    return {"coverage": coverage, "mean_width": mean_width, "n": int(K_a.size)}
