@@ -81,6 +81,7 @@ from src.evaluation.metrics import (  # noqa: E402
     compute_prr,
     compute_ratio_level_metrics,
     compute_strict_factuality_metrics,
+    fit_strict_gamma,
     plot_reliability_diagram,
 )
 from src.features.extractor import (  # noqa: E402
@@ -232,8 +233,9 @@ def _prepare_test_records(
     setup: int,
     device: torch.device,
     feature_params: Any,
+    section: str = "test",
 ) -> List[Dict[str, Any]]:
-    """Materialise the test-split sentence records via the Phase 4-1 trainer helper.
+    """Materialise a split's sentence records via the Phase 4-1 trainer helper.
 
     Parameters
     ----------
@@ -246,6 +248,11 @@ def _prepare_test_records(
         the trainer constructor demands.
     feature_params : SentenceUQParams
         Trained feature-extractor parameters from Phase 4-1.
+    section : str
+        Which split to return — ``"test"`` (default, back-compat), ``"val"``,
+        or ``"train"``. Phase 10-2 (Part B) reads the ``"val"`` split to pick
+        the headline strict ranker and fit ``gamma`` without touching the test
+        numbers.
 
     Returns
     -------
@@ -292,7 +299,7 @@ def _prepare_test_records(
         cache_dirs=cache_dirs,
         processed_dirs=processed_dirs,
     )
-    return list(data.get("test") or [])
+    return list(data.get(section) or [])
 
 
 def _filter_positive(records: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -354,6 +361,8 @@ def _ours_predictions(
         ``p_strict``       : μ̂_j^{m_j} (Bayesian variant reuses probit-shrunk μ̃)
         ``total_U``        : ratio-level total uncertainty
         ``aleatoric_U``    : ratio-level aleatoric component
+        ``score_min``      : weakest-link ``min_l token_pi[l]`` (Phase 10-2 B.2)
+        ``score_softmin``  : smooth weakest-link (β = 10) (Phase 10-2 B.2)
     """
     n = len(z_tokens_list)
     mu_hat = np.empty(n, dtype=np.float64)
@@ -362,6 +371,8 @@ def _ours_predictions(
     p_strict = np.empty(n, dtype=np.float64)
     total_U = np.empty(n, dtype=np.float64)
     aleatoric_U = np.empty(n, dtype=np.float64)
+    score_min = np.empty(n, dtype=np.float64)
+    score_softmin = np.empty(n, dtype=np.float64)
     for i, (z, m) in enumerate(zip(z_tokens_list, m_vec)):
         out = predictor.predict_sentence(z, m_j=int(m))
         mu_hat[i] = float(out["mu_hat"])
@@ -370,6 +381,9 @@ def _ours_predictions(
         p_strict[i] = float(out["p_strict_factual"] or 0.0)
         total_U[i] = float(out["total_U"] or 0.0)
         aleatoric_U[i] = float(out["aleatoric_U"] or 0.0)
+        token_pi = out["token_pi"].detach().cpu().to(torch.float64).numpy()
+        score_min[i] = float(token_pi.min())
+        score_softmin[i] = _softmin(token_pi, beta=10.0)
     return {
         "mu_hat": mu_hat,
         "mu_probit": mu_probit,
@@ -377,7 +391,22 @@ def _ours_predictions(
         "p_strict": p_strict,
         "total_U": total_U,
         "aleatoric_U": aleatoric_U,
+        "score_min": score_min,
+        "score_softmin": score_softmin,
     }
+
+
+def _softmin(pi: np.ndarray, beta: float = 10.0) -> float:
+    """Smooth weakest-link score ``-(1/β) logsumexp(-β·π)`` (Phase 10-2 B.2).
+
+    Matches the AND-semantics of the strict label ``A_j`` (the sentence is
+    factual only if *every* token is): as ``β -> ∞`` it converges to
+    ``min_l π_l``; for finite ``β`` it is a smooth lower envelope. Computed via
+    :func:`scipy.special.logsumexp` for numerical stability.
+    """
+    from scipy.special import logsumexp
+
+    return float(-(1.0 / beta) * logsumexp(-beta * pi))
 
 
 # ---------------------------------------------------------------------------
@@ -540,6 +569,171 @@ def _auroc_metric(y: np.ndarray, p: np.ndarray) -> float:
 def _ece_metric(y: np.ndarray, p: np.ndarray) -> float:
     """ECE metric routine plumbed into :func:`compute_bootstrapped_ci`."""
     return float(compute_calibration_metrics(y, p, n_bins=10)["ECE"])
+
+
+# ---------------------------------------------------------------------------
+# Strict-metric decoupling (Phase 10-2 Part B): ranking vs calibration
+# ---------------------------------------------------------------------------
+
+# Candidate strict rankers, all estimates of P(A_j = 1) (higher -> more
+# factual). Order is the column / selection order. ``mupow`` is also the
+# calibration target (Brier/ECE), per B.2.
+_STRICT_RANKERS: Tuple[str, ...] = ("mu", "mupow", "min", "softmin")
+
+
+def _strict_candidate_scores(
+    pack: Dict[str, np.ndarray], m: np.ndarray
+) -> Dict[str, np.ndarray]:
+    """Per-sentence candidate strict ranking scores (Phase 10-2 B.2).
+
+    All four are estimates of ``P(A_j = 1)`` (higher -> more factual):
+    ``mu`` (raw mean), ``mupow = mu_hat ** m_j`` (model-consistent calibration
+    target), ``min`` (weakest-link), ``softmin`` (smooth weakest-link).
+    """
+    mu = pack["mu_hat"]
+    return {
+        "mu": mu,
+        "mupow": np.power(np.clip(mu, 0.0, 1.0), m),
+        "min": pack["score_min"],
+        "softmin": pack["score_softmin"],
+    }
+
+
+def _select_headline_ranker(
+    candidates: Dict[str, np.ndarray], A: np.ndarray
+) -> Optional[str]:
+    """Pick the candidate with the highest AUROC on the given (val) split.
+
+    Returns ``None`` when the split has a single strict class (AUROC undefined
+    for every candidate), so the caller can fall back.
+    """
+    if A.size == 0 or np.unique(A).size < 2:
+        return None
+    best_name: Optional[str] = None
+    best_auroc = -np.inf
+    for name in _STRICT_RANKERS:
+        auroc = _auroc_metric(A, candidates[name])
+        if np.isfinite(auroc) and auroc > best_auroc:
+            best_auroc = auroc
+            best_name = name
+    return best_name
+
+
+def _ours_strict_decoupled_columns(
+    A_test: np.ndarray,
+    pack_test: Dict[str, np.ndarray],
+    m_test: np.ndarray,
+    headline_ranker: str,
+    gamma_hat: float,
+    bootstrap_iters: int,
+    seed: int,
+) -> Dict[str, Any]:
+    """Extra strict columns for an ``Ours`` method (Phase 10-2 Part B).
+
+    Adds, without touching the legacy columns produced by :func:`_strict_row`:
+    per-candidate ``strict_AUROC_*`` / ``strict_AUPRC_*`` (ranking), one
+    calibration block on ``score_mu_pow`` (``strict_Brier_mupow`` /
+    ``strict_ECE_mupow``), the ``gamma`` recalibration block
+    (``mu_hat ** (gamma * m_j)``), the val-selected headline ranker plus its
+    bootstrapped 95 % CI on the **test** split.
+    """
+    cand_test = _strict_candidate_scores(pack_test, m_test)
+    cols: Dict[str, Any] = {}
+
+    # --- per-candidate ranking (AUROC/AUPRC) ---
+    for name in _STRICT_RANKERS:
+        rank = compute_strict_factuality_metrics(
+            A_test, p_calib=cand_test[name], ranking_score=cand_test[name]
+        )
+        cols[f"strict_AUROC_{name}"] = rank["AUROC"]
+        cols[f"strict_AUPRC_{name}"] = rank["AUPRC"]
+
+    # --- calibration block on score_mu_pow (the model-consistent target) ---
+    # NB: ECE/Brier are deliberately NOT reported on raw mu_hat (type mismatch:
+    # mu_hat is not an estimate of P(A_j=1)).
+    mupow_calib = compute_strict_factuality_metrics(
+        A_test, p_calib=cand_test["mupow"]
+    )
+    cols["strict_Brier_mupow"] = mupow_calib["Brier"]
+    cols["strict_ECE_mupow"] = mupow_calib["ECE"]
+
+    # --- headline ranker (selected on val) + bootstrapped CI on test ---
+    headline_score = cand_test[headline_ranker]
+    cols["strict_headline_ranker"] = headline_ranker
+    cols["strict_AUROC_headline"] = _auroc_metric(A_test, headline_score)
+    headline_ci = compute_bootstrapped_ci(
+        A_test, headline_score, _auroc_metric,
+        n_bootstrap=bootstrap_iters, seed=seed,
+    )
+    cols["strict_headline_CI_lo"] = headline_ci["lower"]
+    cols["strict_headline_CI_hi"] = headline_ci["upper"]
+
+    # --- gamma recalibration block: p = mu_hat ** (gamma * m_j) ---
+    mu_safe = np.clip(pack_test["mu_hat"], 1e-6, 1.0 - 1e-6)
+    p_gamma = np.exp(gamma_hat * m_test * np.log(mu_safe))
+    gamma_metrics = compute_strict_factuality_metrics(
+        A_test, p_calib=p_gamma, ranking_score=p_gamma
+    )
+    cols["gamma_hat"] = float(gamma_hat)
+    cols["strict_AUROC_gamma"] = gamma_metrics["AUROC"]
+    cols["strict_Brier_gamma"] = gamma_metrics["Brier"]
+    cols["strict_ECE_gamma"] = gamma_metrics["ECE"]
+    return cols
+
+
+def _decouple_for_method(
+    predictor: Predictor,
+    label: str,
+    A_test: np.ndarray,
+    pack_test: Dict[str, np.ndarray],
+    m_test: np.ndarray,
+    z_val_list: Optional[Sequence[torch.Tensor]],
+    m_val: Optional[np.ndarray],
+    A_val: Optional[np.ndarray],
+    bootstrap_iters: int,
+    seed: int,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Build the decoupled strict columns for one ``Ours`` method.
+
+    Selects the headline ranker and fits ``gamma`` on the **validation** split
+    (Phase 10-2 B.2/B.3: "decide on val, report on test"). Falls back to
+    selecting the headline on the test split (with ``gamma = 1``, i.e. the
+    plain Binomial ``mu_hat ** m_j``) when no usable val split is available;
+    this is flagged in the returned ``info``.
+
+    Returns
+    -------
+    (columns, info) where ``columns`` is merged into the method's strict row
+    and ``info`` is a small dict for console reporting.
+    """
+    headline: Optional[str] = None
+    gamma_hat = 1.0
+    basis = "val"
+    if z_val_list and m_val is not None and A_val is not None and len(z_val_list) > 0:
+        pack_val = _ours_predictions(predictor, z_val_list, m_val.astype(int))
+        cand_val = _strict_candidate_scores(pack_val, m_val)
+        headline = _select_headline_ranker(cand_val, A_val)
+        gamma_hat = fit_strict_gamma(pack_val["mu_hat"], m_val, A_val)
+    if headline is None:
+        # No usable val split (empty or single strict class): fall back to the
+        # test split for the choice of which column is "headline" and keep
+        # gamma at the Binomial identity (1.0). Per-candidate columns below are
+        # all reported regardless, so nothing is hidden.
+        basis = "test_fallback"
+        cand_test = _strict_candidate_scores(pack_test, m_test)
+        headline = _select_headline_ranker(cand_test, A_test) or "mupow"
+    columns = _ours_strict_decoupled_columns(
+        A_test, pack_test, m_test, headline, gamma_hat, bootstrap_iters, seed
+    )
+    columns["strict_headline_basis"] = basis
+    info = {
+        "method": label,
+        "headline_ranker": headline,
+        "headline_basis": basis,
+        "gamma_hat": float(gamma_hat),
+        "strict_AUROC_headline": columns["strict_AUROC_headline"],
+    }
+    return columns, info
 
 
 # ---------------------------------------------------------------------------
@@ -1070,9 +1264,40 @@ def _evaluate_single_setup(
             )
             aux_pack = None
 
+    # --- Validation split for Phase 10-2 (Part B) strict decoupling --------
+    # The headline strict ranker and the gamma recalibration are chosen on the
+    # val split ("decide on val, report on test") and never touch the test
+    # numbers. Falls back gracefully (test-split selection, gamma=1) when no
+    # usable val split exists.
+    z_val_list: Optional[List[torch.Tensor]] = None
+    m_val: Optional[np.ndarray] = None
+    A_val: Optional[np.ndarray] = None
+    val_records = _filter_positive(
+        _prepare_test_records(cfg, setup, device, feature_params, section="val")
+    )
+    if val_records:
+        z_val_list = [
+            _extract_z_tokens(r, feature_params, device) for r in val_records
+        ]
+        K_val = np.array([int(r["K_j"]) for r in val_records], dtype=np.float64)
+        m_val = np.array([int(r["m_j"]) for r in val_records], dtype=np.float64)
+        validate_binomial_counts(K_val, m_val, context="04_evaluate.val")
+        A_val = (K_val == m_val).astype(np.float64)
+        print(
+            f"Val sentences:  {len(val_records)} positive-m_j "
+            f"(frac strict-factual {float(A_val.mean()):.3f}) "
+            "for headline-ranker selection + gamma fit."
+        )
+    else:
+        print(
+            "Val sentences:  none with m_j>0 — strict headline ranker selected "
+            "on the test split and gamma fixed to 1.0 (Binomial)."
+        )
+
     # --- Ratio + strict tables ---------------------------------------------
     ratio_rows: List[Dict[str, Any]] = []
     strict_rows: List[Dict[str, Any]] = []
+    decouple_infos: List[Dict[str, Any]] = []
 
     ratio_rows.append(
         _ratio_row("Ours (Bayesian)", U_pos, ours_bayes["mu_hat"], m_pos,
@@ -1082,18 +1307,29 @@ def _evaluate_single_setup(
         _ratio_row("Ours (Point)", U_pos, ours_point["mu_hat"], m_pos,
                    ours_point["epi_mu"], point_ms, with_binom_nll=True)
     )
-    strict_rows.append(
-        _strict_row("Ours (Bayesian)", A_pos, ours_bayes["p_strict"],
-                    ours_bayes["epi_mu"], bayes_ms,
-                    args.bootstrap_iters, args.seed,
-                    rank_score=ours_bayes["mu_hat"])
+    bayes_row = _strict_row("Ours (Bayesian)", A_pos, ours_bayes["p_strict"],
+                            ours_bayes["epi_mu"], bayes_ms,
+                            args.bootstrap_iters, args.seed,
+                            rank_score=ours_bayes["mu_hat"])
+    bayes_cols, bayes_info = _decouple_for_method(
+        bayesian_predictor, "Ours (Bayesian)", A_pos, ours_bayes, m_pos,
+        z_val_list, m_val, A_val, args.bootstrap_iters, args.seed,
     )
-    strict_rows.append(
-        _strict_row("Ours (Point)", A_pos, ours_point["p_strict"],
-                    -ours_point["mu_hat"], point_ms,
-                    args.bootstrap_iters, args.seed,
-                    rank_score=ours_point["mu_hat"])
+    bayes_row.update(bayes_cols)
+    strict_rows.append(bayes_row)
+    decouple_infos.append(bayes_info)
+
+    point_row = _strict_row("Ours (Point)", A_pos, ours_point["p_strict"],
+                            -ours_point["mu_hat"], point_ms,
+                            args.bootstrap_iters, args.seed,
+                            rank_score=ours_point["mu_hat"])
+    point_cols, point_info = _decouple_for_method(
+        point_predictor, "Ours (Point)", A_pos, ours_point, m_pos,
+        z_val_list, m_val, A_val, args.bootstrap_iters, args.seed,
     )
+    point_row.update(point_cols)
+    strict_rows.append(point_row)
+    decouple_infos.append(point_info)
 
     if aux_pack is not None:
         ratio_rows.append(
@@ -1123,6 +1359,27 @@ def _evaluate_single_setup(
     print(ratio_df.to_string(index=False))
     print("\n=== Strict Factuality Metrics (Secondary, 95% CI) ===")
     print(strict_df.to_string(index=False))
+
+    # Phase 10-2 Part B: ranking-vs-calibration decoupling summary.
+    if decouple_infos:
+        print("\n=== Strict Decoupling (Phase 10-2 B): ranking vs calibration ===")
+        cand_cols = [
+            "method",
+            "strict_AUROC_mu", "strict_AUROC_mupow",
+            "strict_AUROC_min", "strict_AUROC_softmin",
+            "strict_ECE_mupow", "strict_ECE_gamma",
+            "strict_headline_ranker", "gamma_hat",
+        ]
+        present = [c for c in cand_cols if c in strict_df.columns]
+        ours_mask = strict_df["method"].isin([i["method"] for i in decouple_infos])
+        print(strict_df.loc[ours_mask, present].to_string(index=False))
+        for info in decouple_infos:
+            print(
+                f"  headline[{info['method']}] = ranking by '{info['headline_ranker']}' "
+                f"(selected on {info['headline_basis']}), AUROC={info['strict_AUROC_headline']:.4f}; "
+                f"gamma_hat={info['gamma_hat']:.4f}  "
+                "[ECE/Brier reported on mu^m, never on raw mu]"
+            )
 
     # --- Ablations ----------------------------------------------------------
     ab_bp = _ablation_bayesian_vs_point(

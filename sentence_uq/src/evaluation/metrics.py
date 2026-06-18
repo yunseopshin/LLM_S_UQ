@@ -38,6 +38,8 @@ __all__ = [
     "full_evaluation",
     "binomial_nll_full",
     "binomial_ce",
+    "fit_strict_gamma",
+    "partial_correlation_gate",
 ]
 
 
@@ -196,50 +198,76 @@ def compute_ratio_level_metrics(
 
 def compute_strict_factuality_metrics(
     A_true: Any,
-    p_strict: Any,
-    uncertainty: Any,
+    p_calib: Any,
+    uncertainty: Any = None,
+    ranking_score: Any = None,
 ) -> Dict[str, float]:
     """Secondary metrics for the binary target ``A_j = 1{K_j = m_j}``.
 
-    AUROC / AUPRC are computed against ``p_strict`` (probability that
-    ``A_j = 1``). When ``uncertainty`` ranks samples better than the
-    probability does, AUROC may differ; both are reported for the
-    probability-as-score convention. Brier and ECE are calibration
-    measures of ``p_strict``.
+    Phase 10-2 (Part B) decouples *ranking* from *calibration* because they
+    measure different things and need different inputs:
+
+    * **Brier / ECE** (calibration) are computed on ``p_calib``, which must be
+      an estimate of ``P(A_j = 1)`` — the model-consistent object is
+      ``mu_hat ** m_j``, **not** the raw mean ``mu_hat`` (feeding raw ``mu_hat``
+      is a type mismatch that inflates ECE).
+    * **AUROC / AUPRC** (ranking, calibration-invariant) are computed on
+      ``ranking_score`` (higher -> more likely ``A_j = 1``). When
+      ``ranking_score is None`` it defaults to ``p_calib``.
+
+    Backward compatibility
+    ----------------------
+    Legacy callers used the positional form
+    ``compute_strict_factuality_metrics(A, p_strict, uncertainty)`` and got
+    AUROC/AUPRC scored on ``p_strict``. With ``ranking_score`` defaulting to
+    ``p_calib`` those calls are bit-for-bit unchanged. The Phase 10-2 spec
+    lists ``ranking_score`` ahead of ``uncertainty`` in the signature; we keep
+    ``uncertainty`` in its historical 3rd-positional slot instead so the
+    pre-existing positional callers (and ``tests/test_metrics.py``) keep their
+    exact behaviour (hard constraint 0.1). New call sites pass
+    ``ranking_score=`` by keyword.
 
     Parameters
     ----------
     A_true : array-like of shape ``(N,)`` in ``{0, 1}``
-    p_strict : array-like of shape ``(N,)`` in ``[0, 1]``
-        Predicted ``P(A_j = 1) = μ̂_j^{m_j}``.
-    uncertainty : array-like of shape ``(N,)``
-        Higher = more uncertain (kept for the rejection-curve API).
+    p_calib : array-like of shape ``(N,)`` in ``[0, 1]``
+        Probability used for Brier/ECE; must estimate ``P(A_j = 1)``
+        (e.g. ``mu_hat ** m_j``).
+    uncertainty : array-like of shape ``(N,)``, optional
+        Higher = more uncertain (kept for the rejection-curve API; not used by
+        any returned metric). When ``None`` it is derived as
+        ``1 - ranking_score``.
+    ranking_score : array-like of shape ``(N,)``, optional
+        Score used for AUROC/AUPRC (higher -> more likely ``A_j = 1``). When
+        ``None``, defaults to ``p_calib`` (back-compat).
 
     Returns
     -------
     dict with keys ``{"AUROC", "AUPRC", "Brier", "ECE"}``.
     """
     A = _to_numpy_1d(A_true, "A_true")
-    p = _to_numpy_1d(p_strict, "p_strict")
-    u = _to_numpy_1d(uncertainty, "uncertainty")
-    if not (A.shape == p.shape == u.shape):
+    p = _to_numpy_1d(p_calib, "p_calib")
+    s = p if ranking_score is None else _to_numpy_1d(ranking_score, "ranking_score")
+    u = (1.0 - s) if uncertainty is None else _to_numpy_1d(uncertainty, "uncertainty")
+    if not (A.shape == p.shape == s.shape == u.shape):
         raise ValueError(
-            f"shape mismatch: A_true {A.shape}, p_strict {p.shape}, "
-            f"uncertainty {u.shape}"
+            f"shape mismatch: A_true {A.shape}, p_calib {p.shape}, "
+            f"ranking_score {s.shape}, uncertainty {u.shape}"
         )
     if A.size == 0:
         raise ValueError("Cannot compute metrics on empty inputs")
     if not np.all((A == 0) | (A == 1)):
         raise ValueError("A_true must contain only {0, 1}")
 
-    # AUROC / AUPRC need at least one of each class.
+    # AUROC / AUPRC need at least one of each class. Ranking uses ``ranking_score``.
     if A.sum() == 0 or A.sum() == A.size:
         auroc = float("nan")
         auprc = float("nan")
     else:
-        auroc = float(roc_auc_score(A, p))
-        auprc = float(average_precision_score(A, p))
+        auroc = float(roc_auc_score(A, s))
+        auprc = float(average_precision_score(A, s))
 
+    # Brier / ECE are calibration of ``p_calib`` (the estimate of P(A_j=1)).
     calib = compute_calibration_metrics(A, p, n_bins=10)
     return {
         "AUROC": auroc,
@@ -370,6 +398,251 @@ def binomial_ce(
     mu_safe = np.clip(mu_arr, eps, 1.0 - eps)
     ce = -(K_arr * np.log(mu_safe) + (m_arr - K_arr) * np.log(1.0 - mu_safe))
     return float(ce.mean())
+
+
+# ---------------------------------------------------------------------------
+# 2b. Strict-metric decoupling helpers (Phase 10-2 Part B / A)
+# ---------------------------------------------------------------------------
+
+
+def fit_strict_gamma(
+    mu_hat_val: Any,
+    m_val: Any,
+    A_val: Any,
+    bounds: Tuple[float, float] = (1e-3, 5.0),
+    eps: float = 1e-6,
+) -> float:
+    """1-parameter recalibration of the strict-event probability (Phase 10-2 B.3).
+
+    Models ``P(A_j = 1; gamma) = mu_hat_j ** (gamma * m_j)`` and fits the
+    single scalar ``gamma > 0`` on a **validation** split by minimising the
+    strict negative log-likelihood
+
+        ``-sum_j [ A_j log p_j + (1 - A_j) log(1 - p_j) ]``,
+
+    with ``p_j`` clamped to ``[eps, 1 - eps]`` for log-stability. ``gamma = 1``
+    recovers the Binomial plug-in ``mu_hat ** m_j``; ``gamma < 1`` softens the
+    length penalty. This is fit on the strict event ``A_j`` directly, so it is
+    distinct from the Beta-Binomial ``rho`` (fit on counts).
+
+    Parameters
+    ----------
+    mu_hat_val : array-like of shape ``(N,)`` in ``[0, 1]``
+        Validation per-sentence mean factuality ``mu_hat_j``.
+    m_val : array-like of shape ``(N,)``
+        Validation atomic-fact counts ``m_j``.
+    A_val : array-like of shape ``(N,)`` in ``{0, 1}``
+        Validation strict labels ``1{K_j = m_j}``.
+    bounds : (float, float)
+        Search interval for ``gamma`` (default ``(1e-3, 5.0)``).
+    eps : float
+        Probability clamp bound.
+
+    Returns
+    -------
+    float — the fitted ``gamma_hat``. Returns ``1.0`` when the validation set
+    is empty (no information to recalibrate).
+    """
+    from scipy.optimize import minimize_scalar
+
+    mu = _to_numpy_1d(mu_hat_val, "mu_hat_val")
+    m = _to_numpy_1d(m_val, "m_val")
+    A = _to_numpy_1d(A_val, "A_val")
+    if not (mu.shape == m.shape == A.shape):
+        raise ValueError(
+            f"shape mismatch: mu_hat_val {mu.shape}, m_val {m.shape}, "
+            f"A_val {A.shape}"
+        )
+    if mu.size == 0:
+        return 1.0
+
+    mu_safe = np.clip(mu, eps, 1.0 - eps)
+    log_mu = np.log(mu_safe)
+
+    def _nll(gamma: float) -> float:
+        # p = mu ** (gamma * m) computed via exp for stability.
+        p = np.exp(gamma * m * log_mu)
+        p = np.clip(p, eps, 1.0 - eps)
+        return float(-np.sum(A * np.log(p) + (1.0 - A) * np.log(1.0 - p)))
+
+    res = minimize_scalar(_nll, bounds=bounds, method="bounded")
+    gamma_hat = float(res.x)
+    # Keep strictly within bounds (bounded method can return an edge value).
+    return float(min(max(gamma_hat, bounds[0]), bounds[1]))
+
+
+def _residualize_quadratic(y: np.ndarray, x: np.ndarray) -> np.ndarray:
+    """Residuals of ``y`` after an OLS regression on ``[1, x, x^2]``.
+
+    Used to control for the point estimate ``mu_hat`` (and its curvature)
+    before testing whether ``epi_mu`` adds predictive power.
+    """
+    X = np.column_stack([np.ones_like(x), x, x * x])
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+    return y - X @ beta
+
+
+def _standardize(x: np.ndarray) -> np.ndarray:
+    """Zero-mean / unit-std standardisation (no-op scale when std ~ 0)."""
+    mu = float(x.mean())
+    sd = float(x.std())
+    if sd < _EPS:
+        return x - mu
+    return (x - mu) / sd
+
+
+def _logistic_wald(
+    y: np.ndarray, X: np.ndarray, max_iter: int = 100, tol: float = 1e-9
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Newton-Raphson (IRLS) logistic fit with Wald standard errors.
+
+    Fits ``P(y=1) = sigmoid(X beta)`` where ``X`` already contains an intercept
+    column, and returns ``(beta, se, pvalues)`` with two-sided Wald p-values
+    ``2 (1 - Phi(|beta / se|))``. A tiny ridge stabilises the Hessian for
+    near-collinear / separable designs. Raises ``ValueError`` if ``y`` is
+    single-class (no fit possible).
+
+    Returns
+    -------
+    beta : (d,) float64
+    se : (d,) float64
+    pvalues : (d,) float64
+    """
+    from scipy.stats import norm
+
+    y = y.astype(np.float64)
+    X = X.astype(np.float64)
+    if np.unique(y).size < 2:
+        raise ValueError("logistic fit needs both classes present in y")
+    n, d = X.shape
+    beta = np.zeros(d, dtype=np.float64)
+    ridge = 1e-8 * np.eye(d)
+    for _ in range(max_iter):
+        eta = X @ beta
+        p = 1.0 / (1.0 + np.exp(-eta))
+        w = np.clip(p * (1.0 - p), 1e-12, None)
+        grad = X.T @ (y - p)
+        hess = X.T @ (X * w[:, None]) + ridge
+        delta = np.linalg.solve(hess, grad)
+        beta = beta + delta
+        if float(np.max(np.abs(delta))) < tol:
+            break
+    cov = np.linalg.inv(hess)
+    se = np.sqrt(np.clip(np.diag(cov), 0.0, None))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        z = np.where(se > _EPS, beta / se, 0.0)
+    pvalues = 2.0 * (1.0 - norm.cdf(np.abs(z)))
+    return beta, se, pvalues
+
+
+def partial_correlation_gate(
+    epi: Any,
+    mu_hat: Any,
+    ratio_err: Any,
+    strict_wrong: Any,
+    alpha: float = 0.05,
+) -> Dict[str, float]:
+    """Significance gate: does ``epi`` predict error *after* controlling ``mu_hat``?
+
+    Phase 10-2 Part A primary diagnostic. Two independent checks, framed as
+    significance (not magnitude):
+
+    1. **Partial Spearman** between ``residualize(epi | mu_hat)`` and
+       ``residualize(ratio_err | mu_hat)``, where ``residualize(y | x)``
+       regresses ``y`` on ``[1, x, x^2]`` and returns residuals.
+    2. **Logistic check** ``strict_wrong ~ 1 + z(mu_hat) + z(epi)`` (predictors
+       standardised); we report the ``epi`` coefficient, its Wald p-value and
+       sign.
+
+    The gate **PASSES** iff ``epi`` has the correct sign (higher ``epi`` ->
+    larger error) AND ``p < alpha`` in at least one of the two checks.
+
+    Parameters
+    ----------
+    epi : array-like of shape ``(N,)``
+        Epistemic signal (e.g. ``epi_mu``).
+    mu_hat : array-like of shape ``(N,)``
+        Point estimate to control for.
+    ratio_err : array-like of shape ``(N,)``
+        Continuous error ``|U_j - mu_hat|`` (target for the Spearman check).
+    strict_wrong : array-like of shape ``(N,)`` in ``{0, 1}``
+        Strict error ``1 - A_j`` (target for the logistic check).
+    alpha : float
+        Significance threshold (default 0.05).
+
+    Returns
+    -------
+    dict with keys:
+        ``rho_partial``, ``rho_partial_p``, ``spearman_pass``,
+        ``logit_epi_coef``, ``logit_epi_p``, ``logit_epi_sign``,
+        ``logistic_pass``, ``passed`` (1.0/0.0), ``n``.
+    """
+    from scipy.stats import spearmanr
+
+    e = _to_numpy_1d(epi, "epi")
+    mu = _to_numpy_1d(mu_hat, "mu_hat")
+    rerr = _to_numpy_1d(ratio_err, "ratio_err")
+    sw = _to_numpy_1d(strict_wrong, "strict_wrong")
+    if not (e.shape == mu.shape == rerr.shape == sw.shape):
+        raise ValueError(
+            f"shape mismatch: epi {e.shape}, mu_hat {mu.shape}, "
+            f"ratio_err {rerr.shape}, strict_wrong {sw.shape}"
+        )
+    if e.size == 0:
+        raise ValueError("Cannot run the gate on empty inputs")
+
+    # --- (1) partial Spearman -------------------------------------------------
+    rho_partial = float("nan")
+    rho_partial_p = float("nan")
+    try:
+        epi_res = _residualize_quadratic(e, mu)
+        err_res = _residualize_quadratic(rerr, mu)
+        if np.std(epi_res) > _EPS and np.std(err_res) > _EPS:
+            rho, p_spear = spearmanr(epi_res, err_res)
+            rho_partial = float(rho)
+            rho_partial_p = float(p_spear)
+    except (ValueError, FloatingPointError):
+        pass
+    spearman_pass = bool(
+        np.isfinite(rho_partial)
+        and np.isfinite(rho_partial_p)
+        and rho_partial > 0.0
+        and rho_partial_p < alpha
+    )
+
+    # --- (2) logistic strict_wrong ~ 1 + z(mu) + z(epi) -----------------------
+    logit_epi_coef = float("nan")
+    logit_epi_p = float("nan")
+    logit_epi_sign = 0
+    try:
+        X = np.column_stack(
+            [np.ones_like(mu), _standardize(mu), _standardize(e)]
+        )
+        beta, _se, pvals = _logistic_wald(sw, X)
+        logit_epi_coef = float(beta[2])
+        logit_epi_p = float(pvals[2])
+        logit_epi_sign = int(np.sign(beta[2]))
+    except (ValueError, np.linalg.LinAlgError):
+        pass
+    logistic_pass = bool(
+        np.isfinite(logit_epi_coef)
+        and np.isfinite(logit_epi_p)
+        and logit_epi_coef > 0.0
+        and logit_epi_p < alpha
+    )
+
+    passed = bool(spearman_pass or logistic_pass)
+    return {
+        "rho_partial": rho_partial,
+        "rho_partial_p": rho_partial_p,
+        "spearman_pass": float(spearman_pass),
+        "logit_epi_coef": logit_epi_coef,
+        "logit_epi_p": logit_epi_p,
+        "logit_epi_sign": float(logit_epi_sign),
+        "logistic_pass": float(logistic_pass),
+        "passed": float(passed),
+        "n": float(e.size),
+    }
 
 
 # ---------------------------------------------------------------------------
