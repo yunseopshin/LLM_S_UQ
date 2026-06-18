@@ -54,7 +54,10 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import torch
 from torch import Tensor
 
-from src.features.extractor import extract_sentence_token_features
+from src.features.extractor import (
+    extract_sentence_token_features,
+    pool_token_features,
+)
 from src.models.bayesian_main import BayesianSentenceUQ, verify_local_pd
 from src.models.fisher_scoring import _last_diagnostics as _fisher_diagnostics
 from src.utils.validation import validate_binomial_counts
@@ -548,6 +551,10 @@ class SentenceUQTrainer:
                     token_range=token_range,
                     params=params,
                 )
+                # Phase 11-A: apply the readout pooling. No-op for the default
+                # ``token_mean`` (returns z unchanged) ⇒ byte-identical for
+                # pre-11-A configs.
+                z = pool_token_features(z, params)
                 all_z.append(z)
                 K_list.append(int(sent.get("K_j", 0) or 0))
                 m_list.append(int(sent.get("m_j", 0) or 0))

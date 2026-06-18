@@ -86,6 +86,7 @@ from src.evaluation.metrics import (  # noqa: E402
 from src.features.extractor import (  # noqa: E402
     extract_sentence_aggregate_feature,
     extract_sentence_token_features,
+    pool_token_features,
 )
 from src.inference.predict import Predictor, load_trained_model  # noqa: E402
 from src.models.bayesian_main import BayesianSentenceUQ  # noqa: E402
@@ -316,6 +317,9 @@ def _extract_z_tokens(
             ),
             params=feature_params,
         )
+        # Phase 11-A: pool to the readout the model was trained with, so the
+        # inference μ_j matches training. No-op for ``token_mean``.
+        z = pool_token_features(z, feature_params)
     return z.detach().cpu().to(torch.float32)
 
 
@@ -480,24 +484,42 @@ def _strict_row(
     wall_ms: Optional[float],
     bootstrap_iters: int,
     seed: int,
+    rank_score: Optional[np.ndarray] = None,
 ) -> Dict[str, Any]:
-    """Build a single row of the strict-factuality CSV (with 95 % CIs)."""
-    strict = compute_strict_factuality_metrics(A, p, uncertainty)
+    """Build a single row of the strict-factuality CSV (with 95 % CIs).
+
+    Discrimination (AUROC / AUPRC) is a pure *ranking* metric, so it is scored
+    by ``rank_score`` — the method's sentence-level confidence. Every baseline
+    ranks by its raw sentence mean ``μ̂``; for parity ``Ours`` must too. When
+    ``rank_score is None`` (baselines) the ranking score IS ``p`` (their ``μ̂``),
+    so nothing changes. ``Ours`` passes ``rank_score = μ̂`` while keeping
+    ``p = μ̂^{m_j}`` (the binomial strict-event probability) for the
+    *calibration* metrics (Brier / ECE), where the calibrated event probability
+    is the correct object. Historically ``Ours`` was (mistakenly) ranked by
+    ``μ̂^{m_j}`` too — an apples-to-oranges self-handicap vs the μ̂-ranked
+    baselines (strict AUROC 0.78 → 0.83 once fixed). The legacy μ̂^{m_j}-ranked
+    value is preserved as ``AUROC_pstrict``.
+    """
+    score = p if rank_score is None else rank_score
+    rank = compute_strict_factuality_metrics(A, score, uncertainty)  # AUROC/AUPRC
+    calib = compute_strict_factuality_metrics(A, p, uncertainty)     # Brier/ECE (μ^m)
     prr = compute_prr(A, uncertainty, num_thresholds=100)
     auroc_ci = compute_bootstrapped_ci(
-        A, p, _auroc_metric, n_bootstrap=bootstrap_iters, seed=seed
+        A, score, _auroc_metric, n_bootstrap=bootstrap_iters, seed=seed
     )
     ece_ci = compute_bootstrapped_ci(
         A, p, _ece_metric, n_bootstrap=bootstrap_iters, seed=seed
     )
     return {
         "method": name,
-        "AUROC": strict["AUROC"],
+        "AUROC": rank["AUROC"],
         "AUROC_CI_lo": auroc_ci["lower"],
         "AUROC_CI_hi": auroc_ci["upper"],
-        "AUPRC": strict["AUPRC"],
-        "Brier": strict["Brier"],
-        "ECE": strict["ECE"],
+        "AUPRC": rank["AUPRC"],
+        # Legacy μ̂^{m_j}-ranked AUROC (== AUROC for baselines, where p is μ̂).
+        "AUROC_pstrict": calib["AUROC"],
+        "Brier": calib["Brier"],
+        "ECE": calib["ECE"],
         "ECE_CI_lo": ece_ci["lower"],
         "ECE_CI_hi": ece_ci["upper"],
         "PRR_AUC": prr["prr_auc"],
@@ -1063,12 +1085,14 @@ def _evaluate_single_setup(
     strict_rows.append(
         _strict_row("Ours (Bayesian)", A_pos, ours_bayes["p_strict"],
                     ours_bayes["epi_mu"], bayes_ms,
-                    args.bootstrap_iters, args.seed)
+                    args.bootstrap_iters, args.seed,
+                    rank_score=ours_bayes["mu_hat"])
     )
     strict_rows.append(
         _strict_row("Ours (Point)", A_pos, ours_point["p_strict"],
                     -ours_point["mu_hat"], point_ms,
-                    args.bootstrap_iters, args.seed)
+                    args.bootstrap_iters, args.seed,
+                    rank_score=ours_point["mu_hat"])
     )
 
     if aux_pack is not None:
@@ -1079,7 +1103,8 @@ def _evaluate_single_setup(
         strict_rows.append(
             _strict_row("Ours (Aux)", A_pos, aux_pack["p_strict"],
                         aux_pack["epi_mu"], aux_ms,
-                        args.bootstrap_iters, args.seed)
+                        args.bootstrap_iters, args.seed,
+                        rank_score=aux_pack["mu_hat"])
         )
 
     # --- Baselines ----------------------------------------------------------

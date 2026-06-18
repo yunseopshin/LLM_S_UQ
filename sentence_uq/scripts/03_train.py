@@ -103,6 +103,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="beta_binomial only: initial concentration phi (default: config).",
     )
     p.add_argument(
+        "--readout", type=str, default=None,
+        choices=["token_mean", "mean", "last", "attention"],
+        help="Phase 11-A sentence readout: token_mean = mean_l sigmoid(theta.z) "
+             "(default, original); mean/last/attention = sigmoid(theta.pool(z)) "
+             "(default: config model.readout).",
+    )
+    p.add_argument(
         "--phi-lr", type=float, default=None,
         help="beta_binomial only: separate Adam lr for log_phi (default: config "
              "optim.phi_lr, else the main lr).",
@@ -262,6 +269,11 @@ def main(argv: list[str] | None = None) -> int:
         else float(_cfg_get(cfg, "model", "phi_init", 50.0))
     )
     learn_phi = bool(_cfg_get(cfg, "model", "learn_phi", True))
+    readout = (
+        args.readout
+        if args.readout is not None
+        else str(_cfg_get(cfg, "model", "readout", "token_mean"))
+    )
     phi_lr = (
         args.phi_lr
         if args.phi_lr is not None
@@ -302,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
         likelihood=likelihood,
         phi_init=phi_init,
         learn_phi=learn_phi,
+        readout=readout,
     )
     if prior_sigma_init != 1.0:
         with torch.no_grad():
@@ -338,6 +351,7 @@ def main(argv: list[str] | None = None) -> int:
             else ""
         )
     )
+    print(f"Readout:     {readout}")
 
     data = trainer.prepare_data(
         split_file=split_file,

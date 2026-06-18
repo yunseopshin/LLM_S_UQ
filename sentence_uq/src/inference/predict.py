@@ -70,6 +70,7 @@ import torch.nn as nn
 from src.features.extractor import (
     SentenceUQParams,
     extract_sentence_token_features,
+    pool_token_features,
 )
 from src.models.likelihood import Likelihood, make_likelihood
 
@@ -375,6 +376,8 @@ class Predictor:
                 token_range=token_range,
                 params=self.feature_params,
             )
+            # Phase 11-A: pool to the model's readout (no-op for token_mean).
+            z = pool_token_features(z, self.feature_params)
         return self.predict_sentence(z, m_j=m_j)
 
     # ------------------------------------------------------------------
@@ -608,6 +611,10 @@ def save_trained_model(
             "likelihood": getattr(feature_params, "likelihood", "binomial"),
             "phi_init": float(getattr(feature_params, "phi_init", 50.0)),
             "learn_phi": bool(getattr(feature_params, "learn_phi", True)),
+            # Phase 11-A: persist the readout so pool-then-project models load
+            # with the right pooling. Default keeps token_mean models compatible
+            # with older payloads that predate this key.
+            "readout": getattr(feature_params, "readout", "token_mean"),
         },
         "extra": dict(extra) if extra is not None else {},
     }
@@ -653,6 +660,7 @@ def load_trained_model(
         likelihood=likelihood_name,
         phi_init=float(cfg.get("phi_init", 50.0)),
         learn_phi=bool(cfg.get("learn_phi", True)),
+        readout=str(cfg.get("readout", "token_mean")),
     )
     feature_params.load_state_dict(payload["feature_params_state_dict"])
     likelihood = make_likelihood(

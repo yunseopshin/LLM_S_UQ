@@ -10,6 +10,11 @@ model:
   phi_init: 50.0            # beta_binomial only: initial concentration (near-Binomial)
   learn_phi: true           # beta_binomial only: if false, phi fixed at phi_init
 
+  # === Sentence readout (Phase 11-A) ===
+  # token_mean : mu_j = mean_l sigmoid(theta . z_l)  -> project-then-pool (original)
+  # mean/last/attention : mu_j = sigmoid(theta . pool(z_l)) -> pool-then-project
+  readout: token_mean       # token_mean | mean | last | attention
+
 # Dataset preparation and splitting (Phase 1-0)
 dataset:
   setup: 2                          # 1, 2, or 3

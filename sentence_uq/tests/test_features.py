@@ -44,6 +44,7 @@ from src.features.extractor import (  # noqa: E402
     extract_sentence_aggregate_feature,
     extract_sentence_token_features,
     extract_token_features,
+    pool_token_features,
 )
 
 
@@ -660,3 +661,77 @@ def test_end_to_end_sentence_pipeline(
     agg = extract_sentence_aggregate_feature(z_sent)
     assert agg.shape == (3 * (projection_dim + 2),)
     assert torch.isfinite(agg).all()
+
+
+# ---------------------------------------------------------------------------
+# Phase 11-A: readout pooling (project-then-pool vs pool-then-project)
+# ---------------------------------------------------------------------------
+
+
+def _params(readout: str, projection_dim: int = 8) -> SentenceUQParams:
+    return SentenceUQParams(
+        hidden_dim=16, num_layers=3, projection_dim=projection_dim, readout=readout
+    )
+
+
+def test_readout_default_is_token_mean_identity() -> None:
+    """Default readout must return the SAME tensor object (bit-identity guard)."""
+    p = SentenceUQParams(hidden_dim=16, num_layers=3, projection_dim=8)
+    assert p.readout == "token_mean"
+    z = torch.randn(5, 10)
+    assert pool_token_features(z, p) is z  # no copy, no-op
+
+
+@pytest.mark.parametrize("readout", ["mean", "last", "attention"])
+def test_pool_then_project_shapes(readout: str) -> None:
+    """mean/last/attention collapse a sentence to a single pooled (1, k) row."""
+    p = _params(readout)
+    z = torch.randn(7, p.feature_dim)
+    out = pool_token_features(z, p)
+    assert out.shape == (1, p.feature_dim)
+    assert torch.isfinite(out).all()
+
+
+def test_pool_mean_matches_manual() -> None:
+    p = _params("mean")
+    z = torch.randn(6, p.feature_dim)
+    assert torch.allclose(pool_token_features(z, p)[0], z.mean(dim=0))
+
+
+def test_pool_last_matches_manual() -> None:
+    p = _params("last")
+    z = torch.randn(6, p.feature_dim)
+    assert torch.allclose(pool_token_features(z, p)[0], z[-1])
+
+
+def test_pool_attention_is_convex_combination() -> None:
+    """Attention output lies in the convex hull of the token features."""
+    p = _params("attention")
+    z = torch.randn(9, p.feature_dim)
+    out = pool_token_features(z, p)[0]
+    # zero-init attn_v ⇒ uniform weights ⇒ equals the mean at initialisation.
+    assert torch.allclose(out, z.mean(dim=0), atol=1e-5)
+
+
+@pytest.mark.parametrize("readout", ["token_mean", "mean", "last", "attention"])
+def test_pool_is_differentiable(readout: str) -> None:
+    """Gradients must flow to z (and to attn_v) — needed by the outer loop."""
+    p = _params(readout)
+    z = torch.randn(5, p.feature_dim, requires_grad=True)
+    pool_token_features(z, p).sum().backward()
+    assert z.grad is not None and torch.isfinite(z.grad).all()
+    if readout == "attention":
+        # attn_v gets a non-trivial gradient once z is non-uniform.
+        assert p.attn_v.grad is not None
+
+
+def test_attention_registers_param_others_do_not() -> None:
+    """attn_v exists ONLY for attention, keeping other state_dicts unchanged."""
+    assert "attn_v" in dict(_params("attention").named_parameters())
+    for ro in ("token_mean", "mean", "last"):
+        assert "attn_v" not in dict(_params(ro).named_parameters())
+
+
+def test_invalid_readout_rejected() -> None:
+    with pytest.raises(ValueError, match="readout must be one of"):
+        SentenceUQParams(hidden_dim=16, num_layers=3, projection_dim=8, readout="bogus")

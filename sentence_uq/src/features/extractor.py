@@ -85,6 +85,11 @@ class SentenceUQParams(nn.Module):
     """
 
     _VALID_LIKELIHOODS = ("binomial", "beta_binomial")
+    #: Phase 11-A readout (sentence-mean construction). ``token_mean`` is the
+    #: original *project-then-pool* ``μ_j = mean_ℓ σ(θᵀ z_ℓ)``; the others are
+    #: *pool-then-project* ``μ_j = σ(θᵀ ζ_j)`` with ``ζ_j = pool(z_ℓ)``. See
+    #: :func:`pool_token_features` and ``docs/route_a_readout.md``.
+    _VALID_READOUTS = ("token_mean", "mean", "last", "attention")
 
     def __init__(
         self,
@@ -94,6 +99,7 @@ class SentenceUQParams(nn.Module):
         likelihood: str = "binomial",
         phi_init: float = 50.0,
         learn_phi: bool = True,
+        readout: str = "token_mean",
     ) -> None:
         super().__init__()
         if hidden_dim <= 0:
@@ -109,6 +115,10 @@ class SentenceUQParams(nn.Module):
                 f"likelihood must be one of {self._VALID_LIKELIHOODS}; "
                 f"got {likelihood!r}"
             )
+        if readout not in self._VALID_READOUTS:
+            raise ValueError(
+                f"readout must be one of {self._VALID_READOUTS}; got {readout!r}"
+            )
         if phi_init <= 0.0:
             raise ValueError(f"phi_init must be positive, got {phi_init}")
 
@@ -118,6 +128,7 @@ class SentenceUQParams(nn.Module):
         self.likelihood = likelihood
         self.phi_init = float(phi_init)
         self.learn_phi = bool(learn_phi)
+        self.readout = readout
 
         self.W = nn.Linear(hidden_dim, projection_dim, bias=False)
         self.alpha = nn.Parameter(torch.zeros(num_layers))
@@ -131,6 +142,14 @@ class SentenceUQParams(nn.Module):
                 torch.tensor(math.log(float(phi_init))),
                 requires_grad=bool(learn_phi),
             )
+
+        # Phase 11-A: register the attention scorer ONLY for the attention
+        # readout, so every other readout keeps a byte-for-byte identical
+        # state_dict (same guard pattern as ``log_phi`` above). ``attn_v`` is a
+        # learnable query over the ``k``-dim feature; zero-init ⇒ uniform
+        # attention at step 0 (== mean readout), so training starts gently.
+        if readout == "attention":
+            self.attn_v = nn.Parameter(torch.zeros(projection_dim + 2))
 
     @property
     def feature_dim(self) -> int:
@@ -288,6 +307,61 @@ def extract_sentence_token_features(
     ent_slice = entropy[start:end]
     top1_slice = top1_prob[start:end]
     return extract_token_features(h_slice, ent_slice, top1_slice, params)
+
+
+def pool_token_features(
+    z_tokens: torch.Tensor, params: SentenceUQParams
+) -> torch.Tensor:
+    """Apply the Phase 11-A *readout* pooling to per-token features ``z_ℓ``.
+
+    The downstream Fisher-scoring core always forms ``μ_j = mean_ℓ σ(θᵀ z_ℓ)``
+    over whatever rows it receives. This function chooses *what those rows are*,
+    which is exactly the project-then-pool vs pool-then-project switch::
+
+        token_mean : return ``z_ℓ`` unchanged              → μ_j = mean_ℓ σ(θᵀ z_ℓ)
+        mean       : ζ_j = mean_ℓ z_ℓ            (1, k)    → μ_j = σ(θᵀ ζ_j)
+        last       : ζ_j = z_{L_j-1}             (1, k)    → μ_j = σ(θᵀ ζ_j)
+        attention  : ζ_j = Σ_ℓ a_ℓ z_ℓ,         (1, k)    → μ_j = σ(θᵀ ζ_j)
+                     a = softmax((z_ℓ · v) / √k)
+
+    Because mean-over-one-row is the identity, the three pool-then-project
+    readouts collapse each sentence to a single pooled "token", so the
+    Fisher-scoring / likelihood / predictor code is reused **unchanged** and
+    the ``token_mean`` path stays byte-for-byte identical to the pre-11-A model
+    (it returns the input tensor object as-is). All ops are autograd-friendly
+    (no detach / in-place) so gradients flow to ψ in the outer loop
+    (CLAUDE.md rule 9).
+
+    Parameters
+    ----------
+    z_tokens : Tensor of shape ``(L_j, k)``.
+        Per-token features from :func:`extract_sentence_token_features`.
+    params : SentenceUQParams
+        Supplies ``params.readout`` and (for ``"attention"``) ``params.attn_v``.
+
+    Returns
+    -------
+    Tensor of shape ``(L_j, k)`` for ``token_mean`` else ``(1, k)``.
+    """
+    if z_tokens.dim() != 2:
+        raise ValueError(
+            f"z_tokens must be (L_j, k); got shape {tuple(z_tokens.shape)}"
+        )
+    readout = getattr(params, "readout", "token_mean")
+
+    if readout == "token_mean":
+        return z_tokens
+    if readout == "mean":
+        return z_tokens.mean(dim=0, keepdim=True)
+    if readout == "last":
+        # Slice keeps the autograd graph; -1: yields shape (1, k).
+        return z_tokens[-1:]
+    if readout == "attention":
+        k = z_tokens.shape[1]
+        scores = (z_tokens @ params.attn_v) / math.sqrt(k)   # (L_j,)
+        weights = F.softmax(scores, dim=0)                   # (L_j,)
+        return (weights.unsqueeze(1) * z_tokens).sum(dim=0, keepdim=True)
+    raise ValueError(f"unknown readout {readout!r}")
 
 
 def extract_sentence_aggregate_feature(z_tokens: torch.Tensor) -> torch.Tensor:
